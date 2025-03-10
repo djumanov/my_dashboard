@@ -1,0 +1,123 @@
+.dashboard-form{
+    @media (min-width: 1200px) {
+        .o_form_view .o_form_sheet_bg > .o_form_sheet {
+            max-width: 95%;
+        }
+    }
+
+    @media (min-width: 576px) {
+        .o_form_view .oe_title {
+            max-width: unset;
+        }
+    }
+    
+    rect:hover{
+        fill: #fff !important;
+    }
+
+    .highcharts-background {
+        fill: #fff;
+    }
+
+    .highcharts-credits{
+        display: none;
+    }
+    
+    .bg-yellow{
+        background-color: yellow;
+    }
+
+    .o_form_view .oe_title > h1, .o_form_view .oe_title > .h1 {
+        min-height: unset !important;
+    }
+
+    .dashboard-container{
+        .cards{
+            width: 30%;
+
+            .card{
+                min-width: 220px;
+                border: 2px solid black;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                p{
+                    margin-bottom: 0 !important;
+                    color: black;
+                    padding: 0 4px 2px 4px;
+                    font-size: 15px;
+                }
+                h3{
+                    text-align: center;
+                    width: 100%;
+                    padding: 2px 4px;
+                }
+            }
+        }
+
+        .graphs{
+            width: 70%;
+            padding: 4px;
+            justify-content: center;
+            flex-wrap: wrap;
+            column-gap: 25px;
+
+            .graph-container{
+                min-width: 400px;
+                flex: 1;
+
+                span{
+                    padding: 3px 6px;
+                    font-size: 20px;
+                    color: black;
+                }
+                
+                .graph{
+                    height: 400px;
+                    border: 1px solid #9b9b9b;
+                    background-color: #fff;
+                }
+            }
+        }
+    }
+
+    .dashboard-hr{
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+
+        .hr-card{
+            min-width: 400px;
+            flex: 1;
+            border: 1px solid #9d9d9d;
+
+            p{
+                padding-top: 1rem;
+                text-align: center;
+            }
+            span{
+                padding: 3px 6px;
+                font-size: 20px;
+                color: black;
+                background-color: #7a7aff;
+                border-radius: 3px;
+                border: 1px solid #9b9b9b;
+            }
+
+            .hr-graph{
+                height: 400px;
+            }
+        }
+    }
+    .highcharts-color-0{
+        fill: #1e88e5 !important;
+        stroke: #1e88e5 !important;
+    }
+    .highcharts-color-1{
+        fill: #ff8f00 !important;
+        stroke: #ff8f00 !important;
+    }
+}
+

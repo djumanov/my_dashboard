@@ -1,0 +1,116 @@
+<templates>
+    <t t-name="custom.dashboard" owl="1">
+        <div class="dashboard-wrapper">
+            <div class="dashboard-container d-flex gap-2 border-2 p-2">
+                <!-- <div id="container-dash"></div> -->
+                <div class="cards d-flex flex-column gap-2">
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.sales?.order_count || 0"/></h3>
+                        <p>SALES ORDER</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.sales?.amount || 0"/></h3>
+                        <p>SALES</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.sales?.target || 0"/></h3>
+                        <p>SALES TARGET - Fixed (Year)</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.sales?.target_achievement || 0"/></h3>
+                        <p>TARGET-ACHIEVEMENT</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.revenue?.amount || 0"/></h3>
+                        <p>REVENUE Income</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.revenue?.cost_of_revenue || 0"/></h3>
+                        <p>COST OF REVENUE</p>
+                    </div>
+                    <div class="card">
+                        <h3 class='bg-yellow'><t t-esc="this.state.main_data.revenue?.gross_profit || 0"/></h3>
+                        <p>GROSS PROFIT</p>
+                    </div>
+                    <div class="card">
+                        <h3 class='bg-yellow'><t t-esc="this.state.main_data.revenue?.gross_profit_margin || 0"/></h3>
+                        <p>GROSS PROFIT MARGIN (%)</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.revenue?.expenses || 0"/></h3>
+                        <p>EXPENSES</p>
+                    </div>
+                    <div class="card">
+                        <h3 class='bg-yellow'><t t-esc="this.state.main_data.revenue?.net_profit || 0"/></h3>
+                        <p>NET PROFIT</p>
+                    </div>
+                    <div class="card">
+                        <h3 class='bg-yellow'><t t-esc="this.state.main_data.revenue?.net_profit_margin || 0"/></h3>
+                        <p>NET PROFIT MARGIN (%)</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.revenue?.accounts_receivable || 0"/></h3>
+                        <p>ACCOUNT RECEIVABLE</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.revenue?.accounts_payable || 0"/></h3>
+                        <p>ACCOUNT PAYABLE</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.hr?.total_employees || 0"/></h3>
+                        <p>TOTAL EMPLOYEE</p>
+                    </div>
+                </div>
+                <div class="graphs d-flex">
+                    <div class='graph-container'>
+                        <p>
+                            <span style="background-color: lightblue">Sales</span>
+                        </p>
+                        <div class="graph" id='sales'></div>
+                    </div>
+                    <div class='graph-container'>
+                        <p>
+                            <span style="background-color: lightgreen">Cash Flow</span>
+                        </p>
+                        <div class="graph" id='cash'></div>
+                    </div>
+                    <div class='graph-container'>
+                        <p style="margin-top: 1.5rem">
+                            <span style="background-color: lightcoral">Revenue</span>
+                        </p>
+                        <div class="graph" id='revenue'></div>
+                    </div>
+                    <div class='graph-container'>
+                        <p style="margin-top: 1.5rem">
+                            <span style="background-color: yellow">Expenses</span>
+                        </p>
+                        <div class="graph" id='expenses'></div>
+                    </div>
+                </div>
+            </div>
+            <br />
+            <br />
+            <p><span style="background-color: lightblue; font-size: 22px; padding: 3px 6px; color: black">HR</span></p>
+            <div class="dashboard-hr">
+                <div class="hr-card">
+                    <p>
+                        <span>Total Employee By Department</span>
+                    </p>
+                    <div class="hr-graph" id="department"></div>
+                </div>
+                <div class="hr-card">
+                    <p>
+                       <span>Total Employee By Gender</span>
+                    </p>
+                    <div class="hr-graph" id="gender"></div>
+                </div>
+                <div class="hr-card">
+                    <p>
+                       <span>Employee Count By Category</span>
+                    </p>
+                    <div class="hr-graph" id="category"></div>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>
