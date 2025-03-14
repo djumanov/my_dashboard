@@ -13,7 +13,7 @@ export class Dashboard extends Component {
         })
         useEffect(
             () => {
-                this.state.main_data = JSON.parse(this.props.record.data.dashboard_data)
+                this.state.main_data = JSON.parse(this.props.record.data.dashboard_data);
                 this.drawPie('gender', this.pieData(this.state.main_data.hr?.gender_data));
                 this.drawPie('expenses', this.pieData(this.state.main_data.expenses?.region_wise));
                 this.drawPie('revenue', this.pieData(this.state.main_data.revenue?.region_wise));
@@ -58,6 +58,7 @@ export class Dashboard extends Component {
                         verticalAlign: 'middle', // 🔴 O‘rtada ushlab turish
                         crop: false, overflow: 'none',
                         formatter: function () {
+                            let formattedValue = Highcharts.numberFormat(this.y, 0, '.', ','); // Format number
                             let bgColor = this.point.color === '#1e88e5' ? '#ff8f00' : '#1e88e5'; // 🔀 Ranglarni almashtirish
                             return `<div style="
                                 background-color: ${bgColor};  
@@ -67,7 +68,7 @@ export class Dashboard extends Component {
                                     border: 1px solid black;
                                     font-weight: bold;
                                     font-size: 16px;
-                                ">${this.y}</div>`;
+                                ">${formattedValue}</div>`;
                         },
                         align: 'center'
                     }
@@ -245,7 +246,7 @@ export class Dashboard extends Component {
                     dataLabels: {
                         enabled: true,
                         formatter: function () {
-                            return `$${Highcharts.numberFormat(this.y, 0, ',', ' ')}`;
+                            return `${Highcharts.numberFormat(this.y, 0, '.', ',')}`;
                         },
                         style: {
                             fontSize: '12px',
