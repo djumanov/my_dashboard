@@ -254,7 +254,7 @@ class L1Dashboard(models.Model):
         
         gross_profit = total_revenue - cost_of_revenue
         gross_profit_margin = (gross_profit / total_revenue) * 100
-        net_profit = total_revenue - abs(total_expenses)
+        net_profit = total_revenue - total_expenses
         net_profit_margin = net_profit / total_revenue * 100
 
         accounts_receivable = self.calculate_accounts_receivable(start_date, end_date)
@@ -269,6 +269,7 @@ class L1Dashboard(models.Model):
             'gross_profit': gross_profit,
             'gross_profit_margin': gross_profit_margin,
             'net_profit': net_profit,
+            'net_profit_margin': net_profit_margin,
             'expenses': abs(total_expenses),
             'net_profit_margin': net_profit_margin,
             'accounts_receivable': accounts_receivable,
@@ -519,10 +520,11 @@ class L1Dashboard(models.Model):
         # Build domain for receivable accounts
         domain = [
             ('account_id.account_type', '=', 'asset_receivable'),  # Receivable accounts in Odoo 16
+            ('account_id.non_trade', '=', False),  # Exclude non-trade receivables
             ('move_id.state', '=', 'posted'),  # Only posted entries
             ('date', '<=', end_date),  # All entries up to end_date
-            ('date', '>=', start_date),  # Start date
-            ('company_id', '=', company_id)
+            # ('date', '>=', start_date),  # Start date
+            # ('company_id', '=', company_id)
         ]
         
         # Get the sum of all receivable account balances
@@ -559,13 +561,35 @@ class L1Dashboard(models.Model):
         # Company id
         company_id = self.env.company.id
         
-        # Build domain for all liability accounts
-        # In Odoo 16, liability accounts have account_type starting with 'liability_'
+        # Build domain for payable accounts only
         domain = [
-            ('account_id.account_type', 'like', 'liability_%'),  # All liability accounts
+            ('account_id.account_type', '=', 'liability_payable'),  # Only payable accounts
             ('move_id.state', '=', 'posted'),  # Only posted entries
             ('date', '<=', end_date),  # All entries up to end_date
-            ('date', '>=', start_date),  # Start date
+            ('company_id', '=', company_id)
+        ]
+        
+        # Get the sum of all payable account balances
+        payable_data = self.env['account.move.line'].read_group(
+            domain=domain,
+            fields=['balance'],
+            groupby=[]
+        )
+        
+        # Calculate total payables (typically negative, so take absolute value)
+        total_payables = 0.0
+        if payable_data:
+            total_payables = abs(payable_data[0].get('balance', 0.0))
+
+        # Build domain for liability accounts only
+        domain = [
+            '|', 
+            ('account_id.account_type', 'in', ('liability_current', 'liability_credit_card')), 
+            '&', 
+            ('account_id.account_type', '=', 'liability_payable'), 
+            ('account_id.non_trade', '=', True),
+            ('move_id.state', '=', 'posted'),  # Only posted entries
+            ('date', '<=', end_date),  # All entries up to end_date
             ('company_id', '=', company_id)
         ]
         
@@ -577,11 +601,11 @@ class L1Dashboard(models.Model):
         )
         
         # Calculate total liabilities (typically negative, so take absolute value)
+        total_liabilities = 0.0
         if liability_data:
             total_liabilities = abs(liability_data[0].get('balance', 0.0))
-            return total_liabilities
         
-        return 0.0
+        return total_payables + total_liabilities
 
     def calculate_revenue_region_wise(self, start_date, end_date):  
         local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
