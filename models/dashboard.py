@@ -210,22 +210,14 @@ class L1Dashboard(models.Model):
         local_sales_amount = export_sales_amount = 0.0
 
         for local_project in local_projects:
-            # Filter the existing sales_orders recordset instead of doing a new search
-            local_project_orders = sales_orders.filtered(
-                lambda order: any(line.project_id.id == local_project.id for line in order.order_line)
-            )
-
-            for local_project_order in local_project_orders:
-                local_sales_amount += local_project_order.amount_untaxed
+            for sales_order in sales_orders:
+                if local_project in sales_order.project_ids:
+                    local_sales_amount += sales_order.amount_untaxed
 
         for export_project in export_projects:
-            # Filter the existing sales_orders recordset instead of doing a new search
-            export_project_orders = sales_orders.filtered(
-                lambda order: any(line.project_id.id == export_project.id for line in order.order_line)
-            )
-
-            for export_project_order in export_project_orders:
-                export_sales_amount += export_project_order.amount_untaxed
+            for sales_order in sales_orders:
+                if export_project in sales_order.project_ids:
+                    export_sales_amount += sales_order.amount_untaxed
 
         return {
             'sales_order_count': sales_order_count,
