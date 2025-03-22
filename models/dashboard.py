@@ -599,34 +599,96 @@ class L1Dashboard(models.Model):
         
         return total_payables + total_liabilities
 
-    def calculate_revenue_region_wise(self, start_date, end_date):  
-        local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
-        export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
-
-        local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])])
-        export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])])
-
-        local_project_ids = local_projects.ids
-        export_project_ids = export_projects.ids
-
-        total_local_revenue = total_export_revenue = 0.0
-
-        # Barcha buyurtmalarni vaqt oralig'ida olish
-        sale_orders = self.env['sale.order'].search([
-            ('date_order', '>=', start_date),
-            ('date_order', '<=', end_date),
-            ('state', 'in', ['sale', 'done']) 
-        ])
-
+    def calculate_revenue_region_wise(self, start_date, end_date):
+        """
+        Calculate revenue based on project tags (Local and Export) from posted invoices
+        
+        This implementation efficiently tracks revenue by:
+        1. Finding all relevant projects tagged as Local or Export
+        2. Identifying all sales orders linked to these projects
+        3. Calculating revenue from posted invoices related to these sales orders
+        
+        Args:
+            start_date (str): Start date in 'YYYY-MM-DD' format
+            end_date (str): End date in 'YYYY-MM-DD' format
+            
+        Returns:
+            dict: Dictionary containing local and export revenue
+        """
+        # Performance optimization: Use search_read to get only needed fields
+        local_tag_id = self.env['project.tags'].search([('name', '=', 'Local')], limit=1).id
+        export_tag_id = self.env['project.tags'].search([('name', '=', 'Export')], limit=1).id
+        
+        if not (local_tag_id or export_tag_id):
+            return {'local_revenue': 0.0, 'export_revenue': 0.0}
+        
+        # Get projects with their tags in one query
+        projects = self.env['project.project'].search_read(
+            [('tag_ids', 'in', [local_tag_id, export_tag_id])],
+            ['id', 'tag_ids']
+        )
+        
+        # Classify projects by tag
+        local_project_ids = []
+        export_project_ids = []
+        
+        for project in projects:
+            if local_tag_id in project['tag_ids']:
+                local_project_ids.append(project['id'])
+            if export_tag_id in project['tag_ids']:
+                export_project_ids.append(project['id'])
+        
+        if not (local_project_ids or export_project_ids):
+            return {'local_revenue': 0.0, 'export_revenue': 0.0}
+        
+        # Find all sale orders related to these projects
+        domain = [
+            ('project_ids', 'in', local_project_ids + export_project_ids),
+            ('company_id', '=', self.company_id.id),
+            ('state', 'in', ['sale', 'done'])
+        ]
+        
+        sale_orders = self.env['sale.order'].search_read(domain, ['id', 'project_ids'])
+        
+        # Classify sale orders by project type
+        local_sale_order_ids = set()
+        export_sale_order_ids = set()
+        
         for order in sale_orders:
-            for line in order.order_line:
-                project = line.project_id
-                if project:
-                    if project.id in local_project_ids:
-                        total_local_revenue += line.price_subtotal 
-                    if project.id in export_project_ids:
-                        total_export_revenue += line.price_subtotal
-
+            order_projects = set(order['project_ids'])
+            if any(project_id in order_projects for project_id in local_project_ids):
+                local_sale_order_ids.add(order['id'])
+            if any(project_id in order_projects for project_id in export_project_ids):
+                export_sale_order_ids.add(order['id'])
+        
+        if not (local_sale_order_ids or export_sale_order_ids):
+            return {'local_revenue': 0.0, 'export_revenue': 0.0}
+        
+        # Get posted customer invoices in the date range related to these sale orders
+        invoice_domain = [
+            ('invoice_date', '>=', start_date),
+            ('invoice_date', '<=', end_date),
+            ('move_type', '=', 'out_invoice'),
+            ('state', '=', 'posted'),
+            ('sale_id', 'in', list(local_sale_order_ids | export_sale_order_ids)),
+            ('company_id', '=', self.company_id.id),
+        ]
+        
+        invoices = self.env['account.move'].search_read(
+            invoice_domain, 
+            ['id', 'sale_id', 'amount_untaxed_signed']
+        )
+        
+        # Calculate revenue
+        total_local_revenue = total_export_revenue = 0.0
+        
+        for invoice in invoices:
+            sale_id = invoice['sale_id'] and invoice['sale_id'][0]
+            if sale_id in local_sale_order_ids:
+                total_local_revenue += invoice['amount_untaxed_signed']
+            if sale_id in export_sale_order_ids:
+                total_export_revenue += invoice['amount_untaxed_signed']
+        
         return {
             'local_revenue': total_local_revenue,
             'export_revenue': total_export_revenue,
