@@ -695,37 +695,72 @@ class L1Dashboard(models.Model):
         }
 
     def calculate_expenses_region_wise(self, start_date, end_date):  
-        # Local va Export teglarini olish
+        # Get Local and Export tags
         local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
         export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
 
-        # Local va Export loyihalarini ajratish
+        # Ensure tags exist
+        if not local_tag or not export_tag:
+            raise ValueError("Local or Export tags not found")
+
+        # Local Projects
         local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])])
+        
+        # Export Projects
         export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])])
+        
+        # Get analytic accounts from projects
+        local_analytic_account_ids = local_projects.mapped('analytic_account_id').ids
+        export_analytic_account_ids = export_projects.mapped('analytic_account_id').ids
+        
+        total_local_expense = 0.0
+        total_export_expense = 0.0
 
-        local_project_ids = local_projects.ids
-        export_project_ids = export_projects.ids
+        # Get confirmed vendor bills within the date range
+        domain = [
+            ('move_type', '=', 'in_invoice'),
+            ('state', '=', 'posted'),
+            ('invoice_date', '>=', start_date),
+            ('invoice_date', '<=', end_date),
+            ('company_id', '=', self.env.company.id),
+        ]
+        vendor_bills = self.env['account.move'].search(domain)
+        
+        for bill in vendor_bills:
+            for line in bill.line_ids:
+                # Ensure analytic distribution exists and is processed correctly
+                if line.analytic_distribution:
+                    # Handle different analytic distribution formats
+                    try:
+                        # Convert to dictionary if it's a string
+                        distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
+                            else eval(line.analytic_distribution)
+                        
+                        # Check each analytic account in the distribution
+                        for account_id, percentage in distribution.items():
+                            account_id = int(account_id)  # Ensure integer
+                            
+                            # Calculate proportional expense based on distribution percentage
+                            proportional_expense = line.price_subtotal * (percentage / 100)
+                            
+                            # Check if the account is in local or export project accounts
+                            if account_id in local_analytic_account_ids:
+                                total_local_expense += proportional_expense
+                            if account_id in export_analytic_account_ids:
+                                total_export_expense += proportional_expense
+                    
+                    except Exception as e:
+                        # Log any errors in processing analytic distribution
+                        print(f"Error processing analytic distribution for bill {bill.id}, line {line.id}: {e}")
 
-        total_local_expense = total_export_expense = 0.0
-
-        # Purchase Order (Xarid buyurtmalari) dan loyihaga bog‘langan xarajatlarni olish
-        purchase_orders = self.env['purchase.order'].search([
-            ('date_order', '>=', start_date),
-            ('date_order', '<=', end_date),
-            ('state', 'in', ['purchase', 'done'])  # Faqat tasdiqlangan buyurtmalar
-        ])
-
-        for order in purchase_orders:
-            for line in order.order_line:
-                project = line.product_id
-                if project:
-                    if project.id in local_project_ids:
-                        total_local_expense += line.price_subtotal
-                    if project.id in export_project_ids:
-                        total_export_expense += line.price_subtotal
+        # Round to 2 decimal places for currency amounts
+        total_local_expense = round(total_local_expense, 2)
+        total_export_expense = round(total_export_expense, 2)
 
         return {
             'local_expense': total_local_expense,
             'export_expense': total_export_expense,
+            'local_projects_count': len(local_projects),
+            'export_projects_count': len(export_projects),
         }
 
