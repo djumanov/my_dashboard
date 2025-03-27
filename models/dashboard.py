@@ -15,11 +15,13 @@ class L1Dashboard(models.Model):
 
     name = fields.Char(string='Dashboard Name', default='L1 Dashboard')
     month = fields.Selection([
-        ('0', 'All'), 
         ('1', 'January'), ('2', 'February'), ('3', 'March'), ('4', 'April'),
         ('5', 'May'), ('6', 'June'), ('7', 'July'), ('8', 'August'),
         ('9', 'September'), ('10', 'October'), ('11', 'November'), ('12', 'December'),
-    ], string='Month', default='0')
+    ])
+    quarter = fields.Selection(
+        [('Q1', 'Quarter 1'), ('Q2', 'Quarter 2'), ('Q3', 'Quarter 3'), ('Q4', 'Quarter 4')]
+    )
     
     dashboard_data = fields.Text(string='Dashboard Data', compute='_compute_dashboard_data')
     dashboard_data_array = fields.Text(string='D')
@@ -30,7 +32,7 @@ class L1Dashboard(models.Model):
     
     def _get_year_selection(self):
         current_year = datetime.now().year
-        return [(str(year), str(year)) for year in range(1990, current_year + 1)]
+        return [(str(year), str(year)) for year in range(2023, current_year + 1)]
 
     year = fields.Selection(
         selection=lambda self: self._get_year_selection(),
@@ -38,48 +40,66 @@ class L1Dashboard(models.Model):
         default=lambda self: str(fields.Date.today().year)
     )
 
-    @api.depends('year', 'month', 'company_id')
+    @api.depends('year', 'month', 'company_id', "quarter")
     def _compute_dashboard_data(self):
         for record in self:
             record.dashboard_data = json.dumps(record._get_dashboard_data())
             record.last_update = fields.Datetime.now()
 
     @api.model
-    def get_dashboard_data_json(self, year=None, month=None):
+    def get_dashboard_data_json(self, year=None, month=None, quarter=None):
         """API method to get dashboard data in JSON format"""
         if not year:
             year = fields.Date.today().year
-        if not month:
-            month = fields.Date.today().month
             
         dashboard = self.search([
             ('year', '=', year),
-            ('month', '=', str(month)),
+            ('month', '=', month),
+            ('quarter', '=', quarter),
             ('company_id', '=', self.env.company.id)
         ], limit=1)
         
         if not dashboard:
             dashboard = self.create({
                 'year': year,
-                'month': str(month),
+                'month': month,
+                'quarter': quarter,
             })
         
         dashboard._compute_dashboard_data()
         return dashboard.dashboard_data
-    
+
     def _get_dashboard_data(self):
         """Compute all dashboard data and return as a structured dictionary"""
         self.ensure_one()
         
-        month = int(self.month)
-        year = int(self.year)
+        month = int(self.month) if self.month else 0
+        year = int(self.year) if self.year else datetime.now().year
+        quarter = self.quarter
         
-        if month == 0:
+        if quarter == 'Q1':
+            start_date = fields.Date.to_string(datetime(year, 1, 1))
+            end_date = fields.Date.to_string(datetime(year, 3, 31))
+            self.month = None
+        elif quarter == 'Q2':
+            start_date = fields.Date.to_string(datetime(year, 4, 1))
+            end_date = fields.Date.to_string(datetime(year, 6, 30))
+            self.month = None
+        elif quarter == 'Q3':
+            start_date = fields.Date.to_string(datetime(year, 7, 1))
+            end_date = fields.Date.to_string(datetime(year, 9, 30))
+            self.month = None
+        elif quarter == 'Q4':
+            start_date = fields.Date.to_string(datetime(year, 10, 1))
+            end_date = fields.Date.to_string(datetime(year, 12, 31))
+        elif month == 0:
             start_date = fields.Date.to_string(datetime(year, 1, 1))
             end_date = fields.Date.to_string(datetime(year, 12, 31))
+            self.quarter = None
         else:
             start_date = fields.Date.to_string(date_utils.start_of(datetime(year, month, 1), 'month'))
             end_date = fields.Date.to_string(date_utils.end_of(datetime(year, month, 1), 'month'))
+            self.quarter = None
            
         sales_data = self._get_sales_data(start_date, end_date)
         financial_data = self._get_financial_data(start_date, end_date)
@@ -144,7 +164,6 @@ class L1Dashboard(models.Model):
             'cash_flow': {
                 'inflows': self._format_amount(cash_flow_data['inflows']),
                 'outflows': self._format_amount(cash_flow_data['outflows']),
-                'net_cash_flow': self._format_amount(cash_flow_data['net_cash_flow']),
                 'region_wise': {
                     'inflow': [
                         {'name': 'Export', 'value': cash_flow_data['export_inflow']},
@@ -158,7 +177,6 @@ class L1Dashboard(models.Model):
                     'total_outflow': cash_flow_data['outflows'],
                     'colors': ['#ff8f00', '#1e88e5'],
                 },
-                'months_data': cash_flow_data['months_data']
             },
             'hr': {
                 'total_employees': employee_data['total_employees'],
@@ -230,11 +248,13 @@ class L1Dashboard(models.Model):
     
     def _get_yearly_sales_target(self):
         """Get the yearly sales target from configuration"""
-        config_param = self.env['ir.config_parameter'].sudo().get_param('l1_dashboard.yearly_sales_target', '250000000')
-        try:
-            return float(config_param)
-        except (ValueError, TypeError):
-            return 250000000
+        sale_targets = self.env['sale.target'].search([
+            ('year', '=', self.year),
+            ('company_id', '=', self.company_id.id)
+        ])
+        if sale_targets:
+            return sum(sale_targets.mapped('target_amount'))
+        return 0.0
     
     def _get_financial_data(self, start_date, end_date):
         """Get financial data for the dashboard"""
@@ -245,13 +265,24 @@ class L1Dashboard(models.Model):
         cost_of_revenue = self.calculate_cost_of_revenue(start_date, end_date)
         
         gross_profit = total_revenue - cost_of_revenue
-        gross_profit_margin = (gross_profit / total_revenue) * 100
-        net_profit = total_revenue - total_expenses
-        net_profit_margin = net_profit / total_revenue * 100
 
+        # Calculate gross profit margin
+        if total_revenue != 0:
+            gross_profit_margin = round((gross_profit / total_revenue) * 100, 2)
+        else:
+            gross_profit_margin = 0.0
+        # Calculate net profit and net profit margin
+        net_profit = gross_profit - total_expenses
+        if total_revenue != 0:
+            net_profit_margin = net_profit / total_revenue * 100
+        else:
+            net_profit_margin = 0.0
+
+        # Calculate accounts receivable and payable
         accounts_receivable = self.calculate_accounts_receivable(start_date, end_date)
         accounts_payable = self.calculate_accounts_payable(start_date, end_date)
 
+        # Calculate revenue and expenses region-wise
         revenue_region_wise = self.calculate_revenue_region_wise(start_date, end_date)
         expenses_region_wise = self.calculate_expenses_region_wise(start_date, end_date)
 
@@ -313,69 +344,6 @@ class L1Dashboard(models.Model):
             'departments': departments,
             'categories': categories_count,
         }
-    
-    def _get_cash_flow_data(self, start_date, end_date):
-        """Get cash flow data for the period"""
-        cash_accounts = self.env['account.account'].search([
-            '|', ('account_type', '=', 'asset_cash'),
-            ('account_type', '=', 'asset_current'),
-            ('company_id', '=', self.company_id.id),
-        ])
-        
-        cash_moves = self.env['account.move.line'].search([
-            ('date', '>=', start_date),
-            ('date', '<=', end_date),
-            ('account_id', 'in', cash_accounts.ids),
-            ('move_id.state', '=', 'posted'),
-            ('company_id', '=', self.company_id.id),
-        ])
-        
-        inflows = sum(line.balance for line in cash_moves if line.balance > 0)
-        outflows = sum(abs(line.balance) for line in cash_moves if line.balance < 0)
-        
-        local_country_id = self.company_id.country_id.id
-        local_inflow = sum(line.balance for line in cash_moves if 
-                          line.balance > 0 and line.partner_id.country_id.id == local_country_id)
-        export_inflow = inflows - local_inflow
-        
-        local_outflow = sum(abs(line.balance) for line in cash_moves if 
-                           line.balance < 0 and line.partner_id.country_id.id == local_country_id)
-        export_outflow = outflows - local_outflow
-        
-        months_data = []
-        for i in range(3):
-            month_date = fields.Date.from_string(start_date) - relativedelta(months=i)
-            month_start = fields.Date.to_string(date_utils.start_of(month_date, 'month'))
-            month_end = fields.Date.to_string(date_utils.end_of(month_date, 'month'))
-            
-            month_moves = self.env['account.move.line'].search([
-                ('date', '>=', month_start),
-                ('date', '<=', month_end),
-                ('account_id', 'in', cash_accounts.ids),
-                ('move_id.state', '=', 'posted'),
-                ('company_id', '=', self.company_id.id),
-            ])
-            
-            month_inflow = sum(line.balance for line in month_moves if line.balance > 0)
-            month_outflow = sum(abs(line.balance) for line in month_moves if line.balance < 0)
-            
-            months_data.append({
-                'month': month_date.strftime('%b'),
-                'inflow': month_inflow,
-                'outflow': month_outflow,
-                'net': month_inflow - month_outflow,
-            })
-        
-        return {
-            'inflows': inflows,
-            'outflows': outflows,
-            'net_cash_flow': inflows - outflows,
-            'local_inflow': local_inflow,
-            'export_inflow': export_inflow,
-            'local_outflow': local_outflow,
-            'export_outflow': export_outflow,
-            'months_data': months_data,
-        }
 
     def compute_untaxed_expenses(self, start_date, end_date):
         """
@@ -416,6 +384,10 @@ class L1Dashboard(models.Model):
         # Calculate total expenses (typically positive for expense)
         if expense_data:
             total_expenses = expense_data[0].get('balance', 0.0)
+
+            # check if total_expenses is not None
+            if total_expenses is None:
+                total_expenses = 0.0
             return total_expenses if total_expenses > 0 else 0.0
         
         return 0.0
@@ -484,6 +456,13 @@ class L1Dashboard(models.Model):
         if cost_data:
             total_debit = cost_data[0].get('debit', 0.0)
             total_credit = cost_data[0].get('credit', 0.0)
+
+            # check if total_debit and total_credit is not None
+            if total_debit is None:
+                total_debit = 0.0
+            if total_credit is None:
+                total_credit = 0.0
+            # Calculate total cost
             total_cost = total_debit - total_credit
             return total_cost
         
@@ -529,6 +508,9 @@ class L1Dashboard(models.Model):
         # Calculate total receivables (typically positive for receivables)
         if receivable_data:
             total_receivables = receivable_data[0].get('balance', 0.0)
+            if total_receivables is None:
+                total_receivables = 0.0
+            # check if total_receivables is not None
             return total_receivables if total_receivables > 0 else 0.0
         
         return 0.0
@@ -571,33 +553,38 @@ class L1Dashboard(models.Model):
         # Calculate total payables (typically negative, so take absolute value)
         total_payables = 0.0
         if payable_data:
-            total_payables = abs(payable_data[0].get('balance', 0.0))
+            total_payables = payable_data[0].get('balance', 0.0)
+            if total_payables is None:
+                total_payables = 0.0
+            else:
+                total_payables = abs(total_payables)
 
-        # Build domain for liability accounts only
-        domain = [
-            '|', 
-            ('account_id.account_type', 'in', ('liability_current', 'liability_credit_card')), 
-            '&', 
-            ('account_id.account_type', '=', 'liability_payable'), 
-            ('account_id.non_trade', '=', True),
-            ('move_id.state', '=', 'posted'),  # Only posted entries
-            ('date', '<=', end_date),  # All entries up to end_date
-            ('company_id', '=', company_id)
-        ]
+        # # Build domain for liability accounts only
+        # domain = [
+        #     '|', 
+        #     ('account_id.account_type', 'in', ('liability_current', 'liability_credit_card')), 
+        #     '&', 
+        #     ('account_id.account_type', '=', 'liability_payable'), 
+        #     ('account_id.non_trade', '=', True),
+        #     ('move_id.state', '=', 'posted'),  # Only posted entries
+        #     ('date', '<=', end_date),  # All entries up to end_date
+        #     ('company_id', '=', company_id)
+        # ]
         
-        # Get the sum of all liability account balances
-        liability_data = self.env['account.move.line'].read_group(
-            domain=domain,
-            fields=['balance'],
-            groupby=[]
-        )
+        # # Get the sum of all liability account balances
+        # liability_data = self.env['account.move.line'].read_group(
+        #     domain=domain,
+        #     fields=['balance'],
+        #     groupby=[]
+        # )
         
-        # Calculate total liabilities (typically negative, so take absolute value)
-        total_liabilities = 0.0
-        if liability_data:
-            total_liabilities = abs(liability_data[0].get('balance', 0.0))
+        # # Calculate total liabilities (typically negative, so take absolute value)
+        # total_liabilities = 0.0
+        # if liability_data:
+        #     total_liabilities = abs(liability_data[0].get('balance', 0.0))
         
-        return total_payables + total_liabilities
+        # return total_payables + total_liabilities
+        return total_payables
 
     def calculate_revenue_region_wise(self, start_date, end_date):
         """
@@ -764,3 +751,103 @@ class L1Dashboard(models.Model):
             'export_projects_count': len(export_projects),
         }
 
+    def _get_cash_flow_data(self, start_date, end_date):
+        """Get cash flow data for the period, filtered by customer invoices and projects."""
+        inflows = outflows = local_inflow = export_inflow = local_outflow = export_outflow = 0.0
+        
+        local_tag_id = self.env['project.tags'].search([('name', '=', 'Local')], limit=1).id
+        export_tag_id = self.env['project.tags'].search([('name', '=', 'Export')], limit=1).id
+
+        customer_payments = self.env['account.payment'].search([
+            ('payment_type', '=', 'inbound'),
+            ('state', '=', 'posted'),
+            ('date', '>=', start_date),
+            ('date', '<=', end_date),
+            ('company_id', '=', self.company_id.id),
+        ])
+
+        for payment in customer_payments:
+            # Try different methods to get related invoices
+            invoices = (
+                payment.reconciled_invoice_ids or  # Try reconciled invoices first
+                payment.invoice_line_ids.move_id or  # Alternative method
+                self.env['account.move'].search([('payment_id', '=', payment.id)])  # Fallback search
+            )
+
+            for invoice in invoices:
+                # Try multiple methods to find the sale order
+                sale_order = False
+                
+                # Method 1: Try direct sale_id if it exists
+                if hasattr(invoice, 'sale_id'):
+                    sale_order = invoice.sale_id
+                
+                # Method 2: Search using invoice reference
+                if not sale_order and invoice.ref:
+                    sale_order = self.env['sale.order'].search([('name', '=', invoice.ref)], limit=1)
+                
+                # Method 3: Search using invoice name
+                if not sale_order and invoice.name:
+                    sale_order = self.env['sale.order'].search([('name', '=', invoice.name)], limit=1)
+
+                if sale_order:
+                    for project in sale_order.project_ids:
+                        if local_tag_id in project.tag_ids.ids:
+                            local_inflow += payment.amount
+                            break
+                        elif export_tag_id in project.tag_ids.ids:
+                            export_inflow += payment.amount
+                            break
+
+        # Outbound Payments (Vendor Payments)
+        vendor_payments = self.env['account.payment'].search([
+            ('payment_type', '=', 'outbound'),
+            ('state', '=', 'posted'),
+            ('date', '>=', start_date),
+            ('date', '<=', end_date),
+            ('company_id', '=', self.company_id.id),
+        ])
+
+        local_project_ids = self.env['project.project'].search([('tag_ids', 'in', [local_tag_id])])
+        export_project_ids = self.env['project.project'].search([('tag_ids', 'in', [export_tag_id])])
+        local_analytic_account_ids = local_project_ids.mapped('analytic_account_id').ids
+        export_analytic_account_ids = export_project_ids.mapped('analytic_account_id').ids
+
+        # Process Outbound Payments
+        for payment in vendor_payments:
+            if not payment.reconciled_bill_ids:
+                continue
+            # Try different methods to get related bills
+            try:
+                bill = payment.reconciled_bill_ids or payment.bill_line_ids.move_id
+            except Exception as e:
+                print(f"Error retrieving reconciled bill for payment {payment.id}: {e}")
+                bill = False
+            if bill:
+                for line in bill.line_ids:
+                    if line.analytic_distribution:
+                        try:
+                            distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
+                                else eval(line.analytic_distribution)
+                            
+                            for account_id, percentage in distribution.items():
+                                account_id = int(account_id)
+                                
+                                # Check if the account is in local or export project accounts
+                                if account_id in local_analytic_account_ids:
+                                    local_outflow += payment.amount
+                                    break
+                                if account_id in export_analytic_account_ids:
+                                    export_outflow += payment.amount
+                                    break
+                        except Exception as e:
+                            print(f"Error processing analytic distribution for bill {bill.id}, line {line.id}: {e}")
+
+        return {
+            'inflows': inflows,
+            'outflows': outflows,
+            'local_inflow': local_inflow,
+            'export_inflow': export_inflow,
+            'local_outflow': local_outflow,
+            'export_outflow': export_outflow,
+        }

@@ -23,6 +23,7 @@
     'data': [
         'security/ir.model.access.csv',
         'views/dashboard.xml',
+        'views/sale_target.xml',
         'views/menu.xml',
     ],
     'assets': {

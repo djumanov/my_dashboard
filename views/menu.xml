@@ -6,23 +6,17 @@
               web_icon="l1_dashboard,static/description/icon.png"
               sequence="90"/>
               
-    <!-- Dashboard Menu -->
-    <!-- <menuitem id="menu_l1_dashboard"
-              name="Dashboard"
-              parent="menu_l1_dashboard_root"
-              action="action_l1_dashboard_client"
-              sequence="1"/> -->
-              
-    <!-- Dashboard Configuration Menu -->
-    <!-- <menuitem id="menu_l1_dashboard_config"
-              name="Configuration"
-              parent="menu_l1_dashboard_root"
-              sequence="99"/> -->
-              
     <!-- Dashboard Settings Menu -->
     <menuitem id="menu_l1_dashboard_settings"
               name="Dashboard Settings"
               parent="menu_l1_dashboard_root"
               action="action_l1_dashboard"
               sequence="1"/>
+
+    <!-- Sale Target Menu -->
+    <menuitem id="menu_l1_sale_target"
+              name="Sales Targets"
+              parent="menu_l1_dashboard_root"
+              action="action_sale_target"
+              sequence="10"/>
 </odoo>

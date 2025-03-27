@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="sale_target_tree_view" model="ir.ui.view">
+        <field name="name">sale.target.tree</field>
+        <field name="model">sale.target</field>
+        <field name="arch" type="xml">
+            <tree string="Sales Targets" multi_edit="1" create="true" delete="true" edit="true">
+                <field name="project_tag_id" optional="show"/>
+                <field name="year" optional="show"/>
+                <field name="target_amount" sum="Total Target" optional="show"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+                <field name="display_name" optional="show"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="sale_target_form_view" model="ir.ui.view">
+        <field name="name">sale.target.form</field>
+        <field name="model">sale.target</field>
+        <field name="arch" type="xml">
+            <form string="Sales Target">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="display_name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group name="target_details">
+                            <field name="project_tag_id" required="1"/>
+                            <field name="year" required="1"/>
+                            <field name="target_amount" required="1"/>
+                        </group>
+                        <group name="company_details">
+                            <field name="company_id" groups="base.group_multi_company" required="1"/>
+                            <field name="company_currency_id" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="sale_target_search_view" model="ir.ui.view">
+        <field name="name">sale.target.search</field>
+        <field name="model">sale.target</field>
+        <field name="arch" type="xml">
+            <search string="Sales Targets">
+                <field name="project_tag_id"/>
+                <field name="year"/>
+                <field name="target_amount"/>
+                
+                <filter string="Current Year" 
+                        domain="[('year', '=', context_today().year)]" 
+                        name="current_year"/>
+                
+                <filter string="Previous Year" 
+                        domain="[('year', '=', context_today().year - 1)]" 
+                        name="previous_year"/>
+                
+                <group expand="0" string="Group By">
+                    <filter string="Project Tag" 
+                            name="group_by_project_tag" 
+                            context="{'group_by': 'project_tag_id'}"/>
+                    <filter string="Year" 
+                            name="group_by_year" 
+                            context="{'group_by': 'year'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Pivot View -->
+    <record id="sale_target_pivot_view" model="ir.ui.view">
+        <field name="name">sale.target.pivot</field>
+        <field name="model">sale.target</field>
+        <field name="arch" type="xml">
+            <pivot string="Sales Targets Analysis">
+                <field name="project_tag_id" type="row"/>
+                <field name="year" type="col"/>
+                <field name="target_amount" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Graph View -->
+    <record id="sale_target_graph_view" model="ir.ui.view">
+        <field name="name">sale.target.graph</field>
+        <field name="model">sale.target</field>
+        <field name="arch" type="xml">
+            <graph string="Sales Targets" type="bar">
+                <field name="project_tag_id"/>
+                <field name="target_amount" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_sale_target" model="ir.actions.act_window">
+        <field name="name">Sales Targets</field>
+        <field name="res_model">sale.target</field>
+        <field name="view_mode">tree,form,pivot,graph,search</field>
+        <field name="search_view_id" ref="sale_target_search_view"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first sales target!
+            </p>
+            <p>
+                Track sales targets by project tags and years.
+                Monitor your team's performance and set clear goals.
+            </p>
+        </field>
+    </record>
+</odoo>

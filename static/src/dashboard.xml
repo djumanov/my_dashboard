@@ -2,7 +2,6 @@
     <t t-name="custom.dashboard" owl="1">
         <div class="dashboard-wrapper">
             <div class="dashboard-container d-flex gap-2 border-2 p-2">
-                <!-- <div id="container-dash"></div> -->
                 <div class="cards d-flex flex-column gap-2">
                     <div class="card">
                         <h3><t t-esc="this.state.main_data.sales?.order_count || 0"/></h3>
@@ -29,11 +28,11 @@
                         <p>COST OF REVENUE</p>
                     </div>
                     <div class="card">
-                        <h3 class='bg-yellow'><t t-esc="this.state.main_data.revenue?.gross_profit || 0"/></h3>
+                        <h3 class='bg-green'><t t-esc="this.state.main_data.revenue?.gross_profit || 0"/></h3>
                         <p>GROSS PROFIT</p>
                     </div>
                     <div class="card">
-                        <h3 class='bg-yellow'><t t-esc="this.state.main_data.revenue?.gross_profit_margin || 0"/></h3>
+                        <h3 class='bg-green'><t t-esc="this.state.main_data.revenue?.gross_profit_margin || 0"/></h3>
                         <p>GROSS PROFIT MARGIN (%)</p>
                     </div>
                     <div class="card">
@@ -41,11 +40,11 @@
                         <p>EXPENSES</p>
                     </div>
                     <div class="card">
-                        <h3 class='bg-yellow'><t t-esc="this.state.main_data.revenue?.net_profit || 0"/></h3>
+                        <h3 class='bg-green'><t t-esc="this.state.main_data.revenue?.net_profit || 0"/></h3>
                         <p>NET PROFIT</p>
                     </div>
                     <div class="card">
-                        <h3 class='bg-yellow'><t t-esc="this.state.main_data.revenue?.net_profit_margin || 0"/></h3>
+                        <h3 class='bg-green'><t t-esc="this.state.main_data.revenue?.net_profit_margin || 0"/></h3>
                         <p>NET PROFIT MARGIN (%)</p>
                     </div>
                     <div class="card">
@@ -64,25 +63,25 @@
                 <div class="graphs d-flex">
                     <div class='graph-container'>
                         <p>
-                            <span style="background-color: lightblue">Sales</span>
+                            <span class="graph_text" style="background-color: lightblue">Sales</span>
                         </p>
                         <div class="graph" id='sales'></div>
                     </div>
                     <div class='graph-container'>
                         <p>
-                            <span style="background-color: lightgreen">Cash Flow</span>
+                            <span class="graph_text" style="background-color: lightgreen">Cash Flow</span>
                         </p>
                         <div class="graph" id='cash'></div>
                     </div>
                     <div class='graph-container'>
-                        <p style="margin-top: 1.5rem">
-                            <span style="background-color: lightcoral">Revenue</span>
+                        <p>
+                            <span class="graph_text" style="background-color: lightcoral">Revenue</span>
                         </p>
                         <div class="graph" id='revenue'></div>
                     </div>
                     <div class='graph-container'>
-                        <p style="margin-top: 1.5rem">
-                            <span style="background-color: yellow">Expenses</span>
+                        <p>
+                            <span class="graph_text" style="background-color: orange">Expenses</span>
                         </p>
                         <div class="graph" id='expenses'></div>
                     </div>
@@ -90,23 +89,23 @@
             </div>
             <br />
             <br />
-            <p><span style="background-color: lightblue; font-size: 22px; padding: 3px 6px; color: black">HR</span></p>
+            <p style="display: flex; width: 100%; justify-content-center"><span class="bg-yellow hr_title">Human Resources</span></p>
             <div class="dashboard-hr">
                 <div class="hr-card">
                     <p>
-                        <span>Total Employee By Department</span>
+                        <span class="graph_text" style="background: #7a7aff;">Total Employee By Department</span>
                     </p>
                     <div class="hr-graph" id="department"></div>
                 </div>
                 <div class="hr-card">
                     <p>
-                       <span>Total Employee By Gender</span>
+                       <span class="graph_text" style="background: #7a7aff;">Total Employee By Gender</span>
                     </p>
                     <div class="hr-graph" id="gender"></div>
                 </div>
                 <div class="hr-card">
                     <p>
-                       <span>Employee Count By Category</span>
+                       <span class="graph_text" style="background: #7a7aff;">Employee Count By Category</span>
                     </p>
                     <div class="hr-graph" id="category"></div>
                 </div>
