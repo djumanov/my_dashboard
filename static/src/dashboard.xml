@@ -81,7 +81,7 @@
                     </div>
                     <div class='graph-container'>
                         <p>
-                            <span class="graph_text" style="background-color: orange">Expenses</span>
+                            <span class="graph_text" style="background-color: orange">Cost of Revenue</span>
                         </p>
                         <div class="graph" id='expenses'></div>
                     </div>

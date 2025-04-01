@@ -3,37 +3,90 @@ from odoo.exceptions import ValidationError
 
 class SaleTarget(models.Model):
     """
-    Sales Target Model to track and manage sales targets by project tag and year.
+    Sales Target Model to track and manage sales targets with categorization.
     """
     _name = 'sale.target'
     _description = 'Sales Target'
-    _inherit = ['mail.thread', 'mail.activity.mixin']  # Add mail tracking
+    _inherit = ['mail.thread', 'mail.activity.mixin']
     _rec_name = 'display_name'
     _order = 'year desc, target_amount desc'
 
-    # Existing fields remain the same
-    project_tag_id = fields.Many2one(
-        'project.tags', 
-        string='Project Tag', 
-        required=True, 
-        help='Project tag for which the sales target is defined',
-        tracking=True  # Enable tracking for this field
-    )
+    # Categories
+    CATEGORY_SELECTION = [
+        ('export', 'Export'),
+        ('local', 'Local')
+    ]
+
+    # Types
+    TYPE_SELECTION = [
+        ('sap', 'SAP'),
+        ('odoo', 'Odoo'),
+        ('ites', 'ITES')
+    ]
     
     year = fields.Integer(
         string='Year', 
         required=True, 
         default=lambda self: fields.Date.today().year,
         help='Year for which the sales target is set',
-        tracking=True
+        tracking=True,
+        group_operator='max',  # Change from False to 'max'
+        widget='integer'
+    )
+
+    def _compute_formatted_year(self):
+        """
+        Ensure year is displayed without formatting
+        """
+        for record in self:
+            record.formatted_year = f"{record.year:d}"
+    
+    formatted_year = fields.Char(
+        string='Year',
+        compute='_compute_formatted_year',
+        store=False
     )
     
     target_amount = fields.Monetary(
         string='Target Amount', 
         currency_field='company_currency_id',
         required=True,
-        help='Total sales target amount for the specified project tag and year',
+        help='Total sales target amount for the specified year',
         tracking=True
+    )
+
+    def _compute_formatted_target_amount(self):
+        """
+        Ensure target amount is displayed without formatting
+        """
+        for record in self:
+            record.formatted_target_amount = f"{record.target_amount:.2f}"
+    
+    formatted_target_amount = fields.Char(
+        string='Target Amount',
+        compute='_compute_formatted_target_amount',
+        store=False
+    )
+    
+    category = fields.Selection(
+        selection=CATEGORY_SELECTION,
+        string='Category',
+        required=True,
+        help='Sales target category (Export or Local)',
+        tracking=True
+    )
+    
+    type = fields.Selection(
+        selection=TYPE_SELECTION,
+        string='Type',
+        required=True,
+        help='Sales target type (SAP, Odoo, or ITES)',
+        tracking=True
+    )
+    
+    description = fields.Text(
+        string='Description',
+        help='Additional details about the sales target'
     )
     
     company_currency_id = fields.Many2one(
@@ -57,14 +110,20 @@ class SaleTarget(models.Model):
         store=True
     )
     
-    # Existing methods remain the same
-    @api.depends('project_tag_id', 'year', 'target_amount')
+    @api.depends('year', 'target_amount', 'category', 'type')
     def _compute_display_name(self):
         """
         Generate a readable display name for the sale target record.
         """
         for record in self:
-            record.display_name = f"{record.project_tag_id.name} - {record.year} (Target: {record.target_amount:,.2f})"
+            # Safely handle potential None or False values
+            year = record.year or ''
+            category = (record.category or '').capitalize()
+            type_val = (record.type or '').upper()
+            target_amount = record.target_amount or 0.0
+
+            # Construct display name with safe string formatting
+            record.display_name = f"{year} ({category} - {type_val}) Target: {target_amount:,.2f}".strip()
     
     @api.constrains('year')
     def _check_year_range(self):
@@ -76,16 +135,20 @@ class SaleTarget(models.Model):
             if record.year < current_year - 10 or record.year > current_year + 10:
                 raise ValidationError(f"Year must be between {current_year-10} and {current_year+10}")
     
-    @api.constrains('project_tag_id', 'year')
+    @api.constrains('year', 'category', 'type')
     def _check_unique_target(self):
         """
-        Ensure only one target exists for a specific project tag and year combination.
+        Ensure only one target exists for a specific year, category, and type combination.
         """
         for record in self:
             existing_targets = self.search([
-                ('project_tag_id', '=', record.project_tag_id.id),
                 ('year', '=', record.year),
+                ('category', '=', record.category),
+                ('type', '=', record.type),
                 ('id', '!=', record.id)
             ])
             if existing_targets:
-                raise ValidationError(f"A target already exists for {record.project_tag_id.name} in {record.year}")
+                raise ValidationError(
+                    f"A target already exists for {record.year} "
+                    f"with {record.category} - {record.type} category"
+                )

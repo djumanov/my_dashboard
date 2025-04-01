@@ -6,9 +6,12 @@
         <field name="model">sale.target</field>
         <field name="arch" type="xml">
             <tree string="Sales Targets" multi_edit="1" create="true" delete="true" edit="true">
-                <field name="project_tag_id" optional="show"/>
-                <field name="year" optional="show"/>
-                <field name="target_amount" sum="Total Target" optional="show"/>
+                <field name="formatted_year" options="{'no_format': True}" widget="char"/>
+                <!-- <field name="year" options="{'no_format': True}" widget="integer"/> -->
+                <field name="category" optional="show"/>
+                <field name="type" optional="show"/>
+                <field name="formatted_target_amount" sum="Total Target" optional="show" options="{'no_format': True}" widget="char"/>
+                <!-- <field name="target_amount" sum="Total Target" optional="show"/> -->
                 <field name="company_id" groups="base.group_multi_company" optional="hide"/>
                 <field name="display_name" optional="show"/>
             </tree>
@@ -29,9 +32,11 @@
                     </div>
                     <group>
                         <group name="target_details">
-                            <field name="project_tag_id" required="1"/>
-                            <field name="year" required="1"/>
+                            <field name="year" required="1" options="{'no_format': True}" widget="integer"/>
+                            <field name="category" required="1"/>
+                            <field name="type" required="1"/>
                             <field name="target_amount" required="1"/>
+                            <field name="description"/>
                         </group>
                         <group name="company_details">
                             <field name="company_id" groups="base.group_multi_company" required="1"/>
@@ -53,8 +58,9 @@
         <field name="model">sale.target</field>
         <field name="arch" type="xml">
             <search string="Sales Targets">
-                <field name="project_tag_id"/>
-                <field name="year"/>
+                <field name="year" options="{'no_format': True}" widget="integer"/>
+                <field name="category"/>
+                <field name="type"/>
                 <field name="target_amount"/>
                 
                 <filter string="Current Year" 
@@ -66,9 +72,12 @@
                         name="previous_year"/>
                 
                 <group expand="0" string="Group By">
-                    <filter string="Project Tag" 
-                            name="group_by_project_tag" 
-                            context="{'group_by': 'project_tag_id'}"/>
+                    <filter string="Category" 
+                            name="group_by_category" 
+                            context="{'group_by': 'category'}"/>
+                    <filter string="Type" 
+                            name="group_by_type" 
+                            context="{'group_by': 'type'}"/>
                     <filter string="Year" 
                             name="group_by_year" 
                             context="{'group_by': 'year'}"/>
@@ -83,8 +92,8 @@
         <field name="model">sale.target</field>
         <field name="arch" type="xml">
             <pivot string="Sales Targets Analysis">
-                <field name="project_tag_id" type="row"/>
-                <field name="year" type="col"/>
+                <field name="category" type="row"/>
+                <field name="type" type="col"/>
                 <field name="target_amount" type="measure"/>
             </pivot>
         </field>
@@ -96,7 +105,8 @@
         <field name="model">sale.target</field>
         <field name="arch" type="xml">
             <graph string="Sales Targets" type="bar">
-                <field name="project_tag_id"/>
+                <field name="category"/>
+                <field name="type"/>
                 <field name="target_amount" type="measure"/>
             </graph>
         </field>
@@ -113,7 +123,7 @@
                 Create your first sales target!
             </p>
             <p>
-                Track sales targets by project tags and years.
+                Track sales targets by category, type, and year.
                 Monitor your team's performance and set clear goals.
             </p>
         </field>

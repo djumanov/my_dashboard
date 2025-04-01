@@ -16,12 +16,12 @@
                             placeholder="Select Year"/>
                         </group>
                         <group>
-                            <field name="month"
-                            placeholder="Select Month"/>
-                        </group>
-                        <group>
                             <field name="quarter"
                             placeholder="Select Quarter"/>
+                        </group>
+                        <group>
+                            <field name="month"
+                            placeholder="Select Month"/>
                         </group>
                         <field name="company_id" groups="base.group_multi_company" invisible="1"/>
                         <field name="currency_id" invisible="1"/>
