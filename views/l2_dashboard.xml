@@ -1,0 +1,47 @@
+<odoo>
+    <!-- Form View with widget -->
+    <record id="view_l2_dashboard_form" model="ir.ui.view">
+        <field name="name">l2.dashboard.form</field>
+        <field name="model">l2.dashboard</field>
+        <field name="arch" type="xml">
+            <form string="L2 Dashboard" class="dashboard-form" create="0" edit="0">
+                <sheet style="width: 100%">
+                    <h1 class='text-center text_shadow'>
+                        L2 Dashboard
+                    </h1>
+                    <br />
+                    <group col="3" class="o_dashboard_header">
+                        <group>
+                            <field name="year" widget="year" options="{'no_create': True}" class="o_year_selector"/>
+                        </group>
+                        <group>
+                            
+                        </group>
+                        <group>
+                            <field name="last_update" readonly="1"/>
+                        </group>
+                        <field name="company_id" groups="base.group_multi_company" invisible="1"/>
+                        <field name="currency_id" invisible="1"/>
+                    </group>
+                    <field name="dashboard_data" readonly="1" nolabel='1' widget="l2_dashboard" class="d-block">
+                        <attribute name="options">
+                            {
+                                "custom_display": "true"
+                            }
+                        </attribute>
+                        <attribute name="style">display: block !important;</attribute>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Act Window -->
+    <record id="action_l2_dashboard" model="ir.actions.act_window">
+        <field name="name">L2 Dashboard</field>
+        <field name="res_model">l2.dashboard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_l2_dashboard_form"/>
+        <field name="target">current</field>
+    </record>
+</odoo>

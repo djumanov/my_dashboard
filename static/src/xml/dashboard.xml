@@ -1,0 +1,452 @@
+<templates>
+    <t t-name="custom.dashboard" owl="1">
+        <div class="dashboard-wrapper">
+            <div class="dashboard-container d-flex gap-2 border-2 p-2">
+                <div class="cards d-flex flex-column gap-2">
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.sales?.order_count || 0"/></h3>
+                        <p>SALES ORDER</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.sales?.amount || 0"/></h3>
+                        <p>SALES</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.sales?.target || 0"/></h3>
+                        <p>SALES TARGET - Fixed (Year)</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.sales?.target_achievement || 0"/></h3>
+                        <p>TARGET-ACHIEVEMENT</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.revenue?.amount || 0"/></h3>
+                        <p>REVENUE Income</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.revenue?.cost_of_revenue || 0"/></h3>
+                        <p>COST OF REVENUE</p>
+                    </div>
+                    <div class="card">
+                        <h3 class='bg-green'><t t-esc="this.state.main_data.revenue?.gross_profit || 0"/></h3>
+                        <p>GROSS PROFIT</p>
+                    </div>
+                    <div class="card">
+                        <h3 class='bg-green'><t t-esc="this.state.main_data.revenue?.gross_profit_margin || 0"/></h3>
+                        <p>GROSS PROFIT MARGIN (%)</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.revenue?.expenses || 0"/></h3>
+                        <p>EXPENSES</p>
+                    </div>
+                    <div class="card">
+                        <h3 class='bg-green'><t t-esc="this.state.main_data.revenue?.net_profit || 0"/></h3>
+                        <p>NET PROFIT</p>
+                    </div>
+                    <div class="card">
+                        <h3 class='bg-green'><t t-esc="this.state.main_data.revenue?.net_profit_margin || 0"/></h3>
+                        <p>NET PROFIT MARGIN (%)</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.revenue?.accounts_receivable || 0"/></h3>
+                        <p>ACCOUNT RECEIVABLE</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.revenue?.accounts_payable || 0"/></h3>
+                        <p>ACCOUNT PAYABLE</p>
+                    </div>
+                    <div class="card">
+                        <h3><t t-esc="this.state.main_data.hr?.total_employees || 0"/></h3>
+                        <p>TOTAL EMPLOYEE</p>
+                    </div>
+                </div>
+                <div class="graphs d-flex">
+                    <div class='graph-container'>
+                        <p>
+                            <!-- <span class="graph_text" style="background-color: lightblue">Sales</span> -->
+                            <a href="/web#action=my_dashboard.action_l2_dashboard" 
+                                class="graph_text" 
+                                style="background-color: lightblue; text-decoration: none; display: inline-block; cursor: pointer;">Sales</a>
+                        </p>
+                        <div class="graph" id='sales'></div>
+                    </div>
+                    <div class='graph-container'>
+                        <p>
+                            <!-- <span class="graph_text" style="background-color: lightgreen">Cash Flow</span> -->
+                            <a href="/web#action=my_dashboard.action_l2_dashboard" 
+                                class="graph_text" 
+                                style="background-color: lightgreen; text-decoration: none; display: inline-block; cursor: pointer;">Cash Flow</a>
+                        </p>
+                        <div class="graph" id='cash'></div>
+                    </div>
+                    <div class='graph-container'>
+                        <p>
+                            <!-- <span class="graph_text" style="background-color: lightcoral">Revenue</span> -->
+                            <a href="/web#action=my_dashboard.action_l2_dashboard" 
+                                class="graph_text" 
+                                style="background-color: lightcoral; text-decoration: none; display: inline-block; cursor: pointer;">Revenue</a>
+                        </p>
+                        <div class="graph" id='revenue'></div>
+                    </div>
+                    <div class='graph-container'>
+                        <p>
+                            <!-- <span class="graph_text" style="background-color: orange">Cost of Revenue</span> -->
+                            <a href="/web#action=my_dashboard.action_l2_dashboard" 
+                                class="graph_text" 
+                                style="background-color: orange; text-decoration: none; display: inline-block; cursor: pointer;">Cost of Revenue</a>
+                        </p>
+                        <div class="graph" id='expenses'></div>
+                    </div>
+                </div>
+            </div>
+            <br />
+            <br />
+            <p style="display: flex; width: 100%; justify-content-center"><span class="bg-yellow hr_title">Human Resources</span></p>
+            <div class="dashboard-hr">
+                <div class="hr-card">
+                    <p>
+                        <span class="graph_text" style="background: #7a7aff;">Total Employee By Department</span>
+                    </p>
+                    <div class="hr-graph" id="department"></div>
+                </div>
+                <div class="hr-card">
+                    <p>
+                       <span class="graph_text" style="background: #7a7aff;">Total Employee By Gender</span>
+                    </p>
+                    <div class="hr-graph" id="gender"></div>
+                </div>
+                <div class="hr-card">
+                    <p>
+                       <span class="graph_text" style="background: #7a7aff;">Employee Count By Category</span>
+                    </p>
+                    <div class="hr-graph" id="category"></div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="custom.l2_dashboard" owl="1" style="display: None;">
+        <div class="l2-dashboard-container">
+            <div t-if="state.isLoading" class="text-center my-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading dashboard data...</p>
+            </div>
+
+            <div t-if="!state.isLoading" class="dashboard-content">
+                <div class="alert alert-danger" t-if="state.error">
+                    <strong>Error:</strong> <t t-esc="state.error"/>
+                </div>
+                
+                <div t-if="!state.error" class="dashboard-wrapper">
+                    <!-- <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card shadow-sm">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fa fa-chart-line me-2"/>Sales Overview
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="dashboard-stats row text-center mb-4">
+                                        <div class="col-md-4">
+                                            <h3 class="text-primary">
+                                                <t t-esc="formatCurrency(state.data.sales.total.sum)"/>
+                                            </h3>
+                                            <p class="text-muted">Total Sales</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h3 class="text-success">
+                                                <t t-esc="formatCurrency(state.data.sales.local_sales.sum)"/>
+                                            </h3>
+                                            <p class="text-muted">Local Sales</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h3 class="text-info">
+                                                <t t-esc="formatCurrency(state.data.sales.export_sales.sum)"/>
+                                            </h3>
+                                            <p class="text-muted">Export Sales</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> -->
+
+                    <div class="row">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fa fa-chart-line me-2"/>Sales Overview
+                            </h5>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-4 px-2">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Total Sales</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div t-ref="totalSalesChart" class="chart-container" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4 px-2">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Local Sales</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div t-ref="localSalesChart" class="chart-container" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4 px-2">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Export Sales</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div t-ref="exportSalesChart" class="chart-container" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <!-- <div class="col-12">
+                            <div class="card shadow-sm">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fa fa-chart-line me-2"/>Sales Overview
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="dashboard-stats row text-center mb-4">
+                                        <div class="col-md-4">
+                                            <h3 class="text-primary">
+                                                <t t-esc="formatCurrency(state.data.sales.total.sum)"/>
+                                            </h3>
+                                            <p class="text-muted">Total Sales</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h3 class="text-success">
+                                                <t t-esc="formatCurrency(state.data.sales.local_sales.sum)"/>
+                                            </h3>
+                                            <p class="text-muted">Local Sales</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h3 class="text-info">
+                                                <t t-esc="formatCurrency(state.data.sales.export_sales.sum)"/>
+                                            </h3>
+                                            <p class="text-muted">Export Sales</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div> -->
+                    </div>
+
+                    <div class="row">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fa fa-chart-line me-2"/>Revenue Overview
+                            </h5>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-4 px-2">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Total Revenue</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div t-ref="totalRevenueChart" class="chart-container" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4 px-2">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Local Revenue</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div t-ref="localRevenueChart" class="chart-container" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4 px-2">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Export Revenue</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div t-ref="exportRevenueChart" class="chart-container" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Expenses -->
+                    <!-- <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card shadow-sm">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fa fa-chart-line me-2"/>Sales Overview
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="dashboard-stats row text-center mb-4">
+                                        <div class="col-md-4">
+                                            <h3 class="text-primary">
+                                                <t t-esc="formatCurrency(state.data.sales.total.sum)"/>
+                                            </h3>
+                                            <p class="text-muted">Total Sales</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h3 class="text-success">
+                                                <t t-esc="formatCurrency(state.data.sales.local_sales.sum)"/>
+                                            </h3>
+                                            <p class="text-muted">Local Sales</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h3 class="text-info">
+                                                <t t-esc="formatCurrency(state.data.sales.export_sales.sum)"/>
+                                            </h3>
+                                            <p class="text-muted">Export Sales</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> -->
+
+                    <div class="row">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fa fa-chart-line me-2"/>Expenses Overview
+                            </h5>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-4 px-2">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Total Expenses</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div t-ref="totalExpensesChart" class="chart-container" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4 px-2">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Local Expenses</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div t-ref="localExpensesChart" class="chart-container" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4 px-2">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Export Expenses</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div t-ref="exportExpensesChart" class="chart-container" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CashFlow -->
+                    <!-- <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card shadow-sm">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fa fa-chart-line me-2"/>Sales Overview
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="dashboard-stats row text-center mb-4">
+                                        <div class="col-md-4">
+                                            <h3 class="text-primary">
+                                                <t t-esc="formatCurrency(state.data.sales.total.sum)"/>
+                                            </h3>
+                                            <p class="text-muted">Total Sales</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h3 class="text-success">
+                                                <t t-esc="formatCurrency(state.data.sales.local_sales.sum)"/>
+                                            </h3>
+                                            <p class="text-muted">Local Sales</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h3 class="text-info">
+                                                <t t-esc="formatCurrency(state.data.sales.export_sales.sum)"/>
+                                            </h3>
+                                            <p class="text-muted">Export Sales</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> -->
+
+                    <div class="row">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fa fa-chart-line me-2"/>CashFlow Overview
+                            </h5>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-4 px-2">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Total CashFlow</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div t-ref="totalCashFlowChart" class="chart-container" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4 px-2">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Local CashFlow</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div t-ref="localCashFlowChart" class="chart-container" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4 px-2">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Export CashFlow</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div t-ref="exportCashFlowChart" class="chart-container" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-end text-muted mt-2">
+                        <small>Last updated: <t t-esc="formatDateTime(state.data.last_update)"/></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

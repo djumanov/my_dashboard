@@ -1,12 +1,11 @@
 {
-    'name': 'L1 Dashboard',
+    'name': 'DrukSmart Dashboard',
     'version': '1.0',
-    'summary': 'Advanced L1 Dashboard',
+    'summary': 'Advanced DrukSmart Dashboard',
     'description': """
-        Comprehensive L1 Dashboard
+        Comprehensive L1, L2, L3, L4, L5 Dashboard
         ==========================
-        * Sales and Cash Flow tracking
-        * Financial KPIs visualization
+        * Sales, Revenue, Expenses and Cash Flow tracking
         * Employee statistics
         * Advanced filtering capabilities
     """,
@@ -23,6 +22,7 @@
     'data': [
         'security/ir.model.access.csv',
         'views/dashboard.xml',
+        'views/l2_dashboard.xml',
         'views/sale_target.xml',
         'views/menu.xml',
     ],
@@ -31,9 +31,9 @@
             "https://cdnjs.cloudflare.com/ajax/libs/highcharts/12.1.2/highcharts.min.js",
             "https://cdnjs.cloudflare.com/ajax/libs/highcharts/12.1.2/highcharts-3d.min.js",
             "https://cdnjs.cloudflare.com/ajax/libs/highcharts/12.1.2/css/highcharts.min.css",
-            'my_dashboard/static/src/*.js',
-            'my_dashboard/static/src/*.scss',
-            'my_dashboard/static/src/*.xml',
+            'my_dashboard/static/src/js/*.js',
+            'my_dashboard/static/src/scss/*.scss',
+            'my_dashboard/static/src/xml/*.xml',
         ],
     },
     'application': True,

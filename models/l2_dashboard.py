@@ -1,0 +1,244 @@
+import json
+from datetime import datetime
+from odoo import api, fields, models, _
+from odoo.tools import float_round
+
+
+class L2Dashboard(models.Model):
+    _name = 'l2.dashboard'
+    _description = 'L2 Dashboard Data'
+    _rec_name = 'name'
+
+    name = fields.Char(
+        string='Dashboard Name', 
+        default=lambda self: _('L2 Dashboard - %s') % fields.Date.today().strftime('%Y')
+    )
+    
+    dashboard_data = fields.Text(string='Dashboard Data', compute='_compute_dashboard_data')
+    last_update = fields.Datetime(string='Last Update', readonly=True)
+    
+    company_id = fields.Many2one('res.company', string='Company', default=lambda self: self.env.company)
+    currency_id = fields.Many2one(related='company_id.currency_id')
+    
+    # Configuration fields
+    year = fields.Selection(
+        selection='_get_year_selection',
+        string='Year',
+        default=lambda self: str(fields.Date.today().year),
+        required=True,
+    )
+    active = fields.Boolean(default=True)
+    
+    @api.model
+    def _get_year_selection(self):
+        """Generate year options from 2023 to current year + 1"""
+        current_year = datetime.now().year
+        return [(str(year), str(year)) for year in range(2023, current_year + 2)]
+
+    @api.depends('year', 'company_id')
+    def _compute_dashboard_data(self):
+        """Compute and store dashboard data as JSON"""
+        for record in self:
+            try:
+                record.dashboard_data = json.dumps(record._get_dashboard_data())
+                record.last_update = fields.Datetime.now()
+            except Exception as e:
+                record.dashboard_data = json.dumps({
+                    'error': _('Error generating dashboard data: %s') % str(e)
+                })
+                # Log error without crashing
+                self.env.cr.rollback()
+                self.env.cr.execute('SAVEPOINT dashboard_error')
+                self.env.logger.error("Dashboard data computation error: %s", str(e))
+
+    @api.model
+    def get_dashboard_data_json(self, year=None, company_id=None):
+        """API method to fetch dashboard data in JSON format"""
+        year = str(year or fields.Date.today().year)
+        company_id = company_id or self.env.company.id
+        
+        # Find or create dashboard
+        dashboard = self.search([
+            ('year', '=', year),
+            ('company_id', '=', company_id),
+            ('active', '=', True)
+        ], limit=1)
+        
+        if not dashboard:
+            dashboard = self.create({
+                'year': year,
+                'company_id': company_id,
+                'name': _('L2 Dashboard - %s') % year
+            })
+        
+        # Force recomputation
+        dashboard._compute_dashboard_data()
+        return dashboard.dashboard_data
+
+    def _get_dashboard_data(self):
+        """Compile all dashboard data into a structured dictionary"""
+        self.ensure_one()
+        year = int(self.year)
+
+        # Get sales data
+        sales_data = self._get_sales_data(year)
+
+        # Get revenue data
+        revenue_data = self._get_revenue_data(year)
+
+        #Get expenses data
+        expenses_data = self._get_expenses_data(year)
+
+        #Get Cash Flow data
+
+        cash_flow_data = self._get_cashflow_data(year)
+        
+        # Build complete dashboard structure
+        return {
+            'filters': {
+                'year': year,
+            },
+            'company': {
+                'name': self.company_id.name,
+                'currency': self.currency_id.symbol,
+                'country': self.company_id.country_id.name or _('Not Set'),
+            },
+            'sales': sales_data,
+            'revenue': revenue_data,
+            'expenses': expenses_data,
+            'cash_flow': cash_flow_data,
+            'last_update': fields.Datetime.to_string(fields.Datetime.now())
+        }
+    
+    def _format_amount(self, amount):
+        """Format amount with 2 decimal precision"""
+        return float_round(amount, precision_digits=2)
+    
+    def _get_sales_data(self, year):
+        """Calculate monthly sales data split between local and export"""
+        # Get month abbreviations (Jan, Feb, etc.)
+        months = [datetime(2000, i+1, 1).strftime('%b') for i in range(12)]
+        
+        sales_orders = self.env['sale.order'].search([
+            ('company_id', '=', self.company_id.id),
+            ('state', 'in', ['sale', 'done']),
+            ('date_order', '>=', f'{year}-01-01'),
+            ('date_order', '<=', f'{year}-12-31')
+        ])
+        # This is just placeholder data for demonstration
+        total_monthly = [0.0] * 12
+        local_monthly = [0.0] * 12
+        export_monthly = [0.0] * 12
+
+        for order in sales_orders:
+            month = order.date_order.month - 1
+            total_monthly[month] += order.amount_total
+        
+        return {
+            'total': {
+                'months': months,
+                'amounts': total_monthly,
+                'sum': self._format_amount(sum(total_monthly)),
+            },
+            'local_sales': {
+                'months': months,
+                'amounts': local_monthly,
+                'sum': self._format_amount(sum(local_monthly)),
+            },
+            'export_sales': {
+                'months': months,
+                'amounts': export_monthly,
+                'sum': self._format_amount(sum(export_monthly)),
+            },
+        }
+
+    def _get_revenue_data(self, year):
+        """Calculate revenue data"""
+        # Get month abbreviations (Jan, Feb, etc.)
+        months = [datetime(2000, i+1, 1).strftime('%b') for i in range(12)]
+
+        # Placeholder data for demonstration
+        total_monthly = [1000.0] * 12
+        local_monthly = [600.0] * 12
+        export_monthly = [400.0] * 12
+
+        return {
+            'total': {
+                'months': months,
+                'amounts': total_monthly,
+                'sum': self._format_amount(sum(total_monthly)),
+            },
+            'local_revenue': {
+                'months': months,
+                'amounts': local_monthly,
+                'sum': self._format_amount(sum(local_monthly)),
+            },
+            'export_revenue': {
+                'months': months,
+                'amounts': export_monthly,
+                'sum': self._format_amount(sum(export_monthly)),
+            },
+        }
+    
+    def _get_expenses_data(self, year):
+        """Calculate expenses data"""
+        # Get month abbreviations (Jan, Feb, etc.)
+        months = [datetime(2000, i+1, 1).strftime('%b') for i in range(12)]
+
+        # Placeholder data for demonstration
+        total_monthly = [1000.0] * 12
+        local_monthly = [600.0] * 12
+        export_monthly = [400.0] * 12
+
+        return {
+            'total': {
+                'months': months,
+                'amounts': total_monthly,
+                'sum': self._format_amount(sum(total_monthly)),
+            },
+            'local_exenses': {
+                'months': months,
+                'amounts': local_monthly,
+                'sum': self._format_amount(sum(local_monthly)),
+            },
+            'export_expenses': {
+                'months': months,
+                'amounts': export_monthly,
+                'sum': self._format_amount(sum(export_monthly)),
+            },
+        }
+
+    def _get_cashflow_data(self, year):
+
+        months = [datetime(2000, i + 1, 1).strftime('%b') for i in range(12)]
+
+        # 🎯 Simulate dynamic values instead of flat copies
+        inflow_total = [10000 + i * 500 for i in range(12)]         # e.g. 10000, 10500, ..., 15500
+        outflow_total = [3000 + (i % 3) * 1000 for i in range(12)]   # e.g. 3000, 4000, 5000, ...
+
+        inflow_local = [inflow_total[i] * 0.6 for i in range(12)]    # 60% of total inflow
+        outflow_local = [outflow_total[i] * 0.5 for i in range(12)]  # 50% of total outflow
+
+        inflow_export = [inflow_total[i] * 0.4 for i in range(12)]   # 40% of total inflow
+        outflow_export = [outflow_total[i] * 0.5 for i in range(12)] # remaining 50%
+
+        return {
+            'total': {
+                'months': months,
+                'inflow': inflow_total,
+                'outflow': outflow_total,
+                'sum': self._format_amount(sum(inflow_total) - sum(outflow_total)),
+            },
+            'local_cash_flow': {
+                'months': months,
+                'inflow': inflow_local,
+                'outflow': outflow_local,
+                'sum': self._format_amount(sum(inflow_local) - sum(outflow_local)),
+            },
+            'export_cash_flow': {
+                'months': months,
+                'inflow': inflow_export,
+                'outflow': outflow_export,
+                'sum': self._format_amount(sum(inflow_export) - sum(outflow_export)),
+            },
+        }
