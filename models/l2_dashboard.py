@@ -133,6 +133,25 @@ class L2Dashboard(models.Model):
         for order in sales_orders:
             month = order.date_order.month - 1
             total_monthly[month] += order.amount_total
+
+        local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
+        export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
+
+        local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])])
+        export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])])
+
+        for month in range(12):
+            for local_project in local_projects:
+                for sales_order in sales_orders:
+                    if sales_order.date_order.month - 1 == month and local_project in sales_order.project_ids:
+                        local_sales_amount = sales_order.amount_untaxed
+                        local_monthly[month] += local_sales_amount
+
+            for export_project in export_projects:
+                for sales_order in sales_orders:
+                    if sales_order.date_order.month - 1 == month and export_project in sales_order.project_ids:
+                        export_sales_amount = sales_order.amount_untaxed
+                        export_monthly[month] += export_sales_amount
         
         return {
             'total': {
