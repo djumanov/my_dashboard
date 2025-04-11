@@ -264,10 +264,26 @@ export class L2Dashboard extends Component {
 
 L2Dashboard.template = 'custom.l2_dashboard';
 L2Dashboard.props = {
+    // Original props
     record: { type: Object, optional: true },
     value: { type: String, optional: true },
     readonly: { type: Boolean, optional: true },
-    name: { type: String, optional: true }
+    name: { type: String, optional: true },
+    
+    // Additional required field props from standard Odoo fields
+    update: { type: Function, optional: true },
+    decorations: { type: Object, optional: true },
+    id: { type: String, optional: true },
+    type: { type: String, optional: true },
+    setDirty: { type: Function, optional: true },
+    
+    // Additional standard Odoo field props that might be passed
+    fieldDependencies: { type: Array, optional: true },
+    required: { type: Boolean, optional: true },
+    className: { type: String, optional: true },
+    options: { type: Object, optional: true },
+    placeholder: { type: String, optional: true },
+    formatValue: { type: Function, optional: true }
 };
 
 registry.category("fields").add("l2_dashboard", L2Dashboard);
