@@ -358,9 +358,71 @@ class L2Dashboard(models.Model):
         months = [datetime(2000, i+1, 1).strftime('%b') for i in range(12)]
 
         # Placeholder data for demonstration
-        total_monthly = [1000.0] * 12
-        local_monthly = [600.0] * 12
-        export_monthly = [400.0] * 12
+        total_monthly = [0.0] * 12
+        local_monthly = [0.0] * 12
+        export_monthly = [0.0] * 12
+
+        # Get Local and Export tags
+        local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
+        export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
+
+        # Ensure tags exist
+        if not local_tag or not export_tag:
+            raise ValueError("Local or Export tags not found")
+
+        # Local Projects
+        local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])])
+        
+        # Export Projects
+        export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])])
+        
+        # Get analytic accounts from projects
+        local_analytic_account_ids = local_projects.mapped('analytic_account_id').ids
+        export_analytic_account_ids = export_projects.mapped('analytic_account_id').ids
+
+        # Get confirmed vendor bills within the date range
+        domain = [
+            ('move_type', '=', 'in_invoice'),
+            ('state', '=', 'posted'),
+            ('invoice_date', '>=', f'{year}-01-01'),
+            ('invoice_date', '<=', f'{year}-12-31'),
+            ('company_id', '=', self.env.company.id),
+        ]
+        vendor_bills = self.env['account.move'].search(domain)
+        
+        for month in range(12):
+            for bill in vendor_bills:
+                # Check if the bill's date falls within the current month
+                if bill.invoice_date.month - 1 == month:
+                    for line in bill.line_ids:
+                        # Ensure analytic distribution exists and is processed correctly
+                        if line.analytic_distribution:
+                            # Handle different analytic distribution formats
+                            try:
+                                # Convert to dictionary if it's a string
+                                distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
+                                    else eval(line.analytic_distribution)
+                                
+                                # Check each analytic account in the distribution
+                                for account_id, percentage in distribution.items():
+                                    account_id = int(account_id)  # Ensure integer
+                                    
+                                    # Calculate proportional expense based on distribution percentage
+                                    proportional_expense = line.price_subtotal * (percentage / 100)
+                                    
+                                    # Check if the account is in local or export project accounts
+                                    if account_id in local_analytic_account_ids:
+                                        local_monthly[month] += proportional_expense
+                                    if account_id in export_analytic_account_ids:
+                                        export_monthly[month] += proportional_expense
+                                    
+                                    
+                            
+                            except Exception as e:
+                                # Log any errors in processing analytic distribution
+                                print(f"Error processing analytic distribution for bill {bill.id}, line {line.id}: {e}")
+
+                    total_monthly[month] += bill.amount_total
 
         return {
             'total': {
