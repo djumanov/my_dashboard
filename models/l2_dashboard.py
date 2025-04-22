@@ -90,7 +90,6 @@ class L2Dashboard(models.Model):
         expenses_data = self._get_expenses_data(year)
 
         #Get Cash Flow data
-
         cash_flow_data = self._get_cashflow_data(year)
         
         # Build complete dashboard structure
@@ -446,7 +445,7 @@ class L2Dashboard(models.Model):
         """Calculate cash flow data for the given year"""
         months = [datetime(2000, i + 1, 1).strftime('%b') for i in range(12)]
 
-        inflow_total = [0.0] * 12 
+        inflow_total = [0.0] * 12
         outflow_total = [0.0] * 12
 
         inflow_local = [0.0] * 12
@@ -455,62 +454,55 @@ class L2Dashboard(models.Model):
         inflow_export = [0.0] * 12
         outflow_export = [0.0] * 12
 
+        start_date = f'{year}-01-01'
+        end_date = f'{year}-12-31'
+        
         local_tag_id = self.env['project.tags'].search([('name', '=', 'Local')], limit=1).id
         export_tag_id = self.env['project.tags'].search([('name', '=', 'Export')], limit=1).id
 
         customer_payments = self.env['account.payment'].search([
             ('payment_type', '=', 'inbound'),
             ('state', '=', 'posted'),
-            ('date', '>=', f'{year}-01-01'),
-            ('date', '<=', f'{year}-12-31'),
+            ('date', '>=', start_date),
+            ('date', '<=', end_date),
             ('company_id', '=', self.company_id.id),
         ])
 
-        for month in range(12):
-            for payment in customer_payments:
-                # Check if the payment's date falls within the current month
-                if payment.date.month - 1 == month:
-                    # Try different methods to get related invoices
-                    invoices = (
-                        payment.reconciled_invoice_ids or  # Try reconciled invoices first
-                        payment.invoice_line_ids.move_id or  # Alternative method
-                        self.env['account.move'].search([('payment_id', '=', payment.id)])  # Fallback search
-                    )
+        for payment in customer_payments:
+            month = payment.date.month - 1
+            invoices = (
+                payment.reconciled_invoice_ids or 
+                payment.invoice_line_ids.move_id or
+                self.env['account.move'].search([('payment_id', '=', payment.id)])
+            )
 
-                    for invoice in invoices:
-                        # Try multiple methods to find the sale order
-                        sale_order = False
-                        
-                        # Method 1: Try direct sale_id if it exists
-                        if hasattr(invoice, 'sale_id'):
-                            sale_order = invoice.sale_id
-                        
-                        # Method 2: Search using invoice reference
-                        if not sale_order and invoice.ref:
-                            sale_order = self.env['sale.order'].search([('name', '=', invoice.ref)], limit=1)
-                        
-                        # Method 3: Search using invoice name
-                        if not sale_order and invoice.name:
-                            sale_order = self.env['sale.order'].search([('name', '=', invoice.name)], limit=1)
+            for invoice in invoices:
+                sale_order = False
+                
+                if hasattr(invoice, 'sale_id'):
+                    sale_order = invoice.sale_id
+                
+                if not sale_order and invoice.ref:
+                    sale_order = self.env['sale.order'].search([('name', '=', invoice.ref)], limit=1)
+                
+                if not sale_order and invoice.name:
+                    sale_order = self.env['sale.order'].search([('name', '=', invoice.name)], limit=1)
 
-                        if sale_order:
-                            for project in sale_order.project_ids:
-                                if local_tag_id in project.tag_ids.ids:
-                                    inflow_local[month] += payment.amount
-                                    break
-                                elif export_tag_id in project.tag_ids.ids:
-                                    inflow_export[month] += payment.amount
-                                    break
-                    
-                    # Calculate total inflow for the month
-                    inflow_total[month] += payment.amount
+                if sale_order:
+                    for project in sale_order.project_ids:
+                        if local_tag_id in project.tag_ids.ids:
+                            inflow_local[month] += payment.amount
+                            break
+                        elif export_tag_id in project.tag_ids.ids:
+                            inflow_export[month] += payment.amount
+                            break
+            inflow_total[month] += payment.amount
 
-        # Outbound Payments (Vendor Payments)
         vendor_payments = self.env['account.payment'].search([
             ('payment_type', '=', 'outbound'),
             ('state', '=', 'posted'),
-            ('date', '>=', f'{year}-01-01'),
-            ('date', '<=', f'{year}-12-31'),
+            ('date', '>=', start_date),
+            ('date', '<=', end_date),
             ('company_id', '=', self.company_id.id),
         ])
 
@@ -519,40 +511,35 @@ class L2Dashboard(models.Model):
         local_analytic_account_ids = local_project_ids.mapped('analytic_account_id').ids
         export_analytic_account_ids = export_project_ids.mapped('analytic_account_id').ids
 
-        for month in range(12):
-            # Process Outbound Payments
-            for payment in vendor_payments:
-                # Check if the payment's date falls within the current month
-                if payment.date.month - 1 == month:
-                    if not payment.reconciled_bill_ids:
-                        continue
-                    # Try different methods to get related bills
-                    try:
-                        bill = payment.reconciled_bill_ids or payment.bill_line_ids.move_id
-                    except Exception as e:
-                        print(f"Error retrieving reconciled bill for payment {payment.id}: {e}")
-                        bill = False
-                    if bill:
-                        for line in bill.line_ids:
-                            if line.analytic_distribution:
-                                try:
-                                    distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
-                                        else eval(line.analytic_distribution)
-                                    
-                                    for account_id, percentage in distribution.items():
-                                        account_id = int(account_id)
-                                        
-                                        # Check if the account is in local or export project accounts
-                                        if account_id in local_analytic_account_ids:
-                                            local_outflow += payment.amount
-                                            break
-                                        if account_id in export_analytic_account_ids:
-                                            export_outflow += payment.amount
-                                            break
-                                except Exception as e:
-                                    print(f"Error processing analytic distribution for bill {bill.id}, line {line.id}: {e}")
-                    # Calculate total outflow for the month
-                    outflow_total[month] += payment.amount
+        for payment in vendor_payments:
+            month = payment.date.month - 1
+            if not payment.reconciled_bill_ids:
+                continue
+            try:
+                bill = payment.reconciled_bill_ids or payment.bill_line_ids.move_id
+            except Exception as e:
+                print(f"Error retrieving reconciled bill for payment {payment.id}: {e}")
+                bill = False
+            if bill:
+                for line in bill.line_ids:
+                    if line.analytic_distribution:
+                        try:
+                            distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
+                                else eval(line.analytic_distribution)
+                            
+                            for account_id, percentage in distribution.items():
+                                account_id = int(account_id)
+                                
+                                # Check if the account is in local or export project accounts
+                                if account_id in local_analytic_account_ids:
+                                    outflow_local[month] += payment.amount
+                                    break
+                                if account_id in export_analytic_account_ids:
+                                    outflow_export[month] += payment.amount
+                                    break
+                        except Exception as e:
+                            print(f"Error processing analytic distribution for bill {bill.id}, line {line.id}: {e}")
+            outflow_total[month] += payment.amount
 
         return {
             'total': {
