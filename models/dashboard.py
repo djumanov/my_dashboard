@@ -225,17 +225,52 @@ class L1Dashboard(models.Model):
         local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])])
         export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])])
 
+        local_analytic_account_ids = local_projects.mapped('analytic_account_id').ids
+        export_analytic_account_ids = export_projects.mapped('analytic_account_id').ids
+
         local_sales_amount = export_sales_amount = 0.0
 
         for local_project in local_projects:
             for sales_order in sales_orders:
                 if local_project in sales_order.project_ids:
                     local_sales_amount += sales_order.amount_untaxed
+                else:
+                    order_lines = sales_order.order_line
+                    for line in order_lines:
+                        if line.analytic_distribution:
+                            try:
+                                distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
+                                    else eval(line.analytic_distribution)
+                                
+                                for account_id, percentage in distribution.items():
+                                    account_id = int(account_id)
+                                    
+                                    if account_id in local_analytic_account_ids:
+                                        local_sales_amount += sales_order.amount_untaxed
+                                        break
+                            except Exception as e:
+                                _logger.error(f"Error processing analytic distribution for order {sales_order.id}: {e}")
 
         for export_project in export_projects:
             for sales_order in sales_orders:
                 if export_project in sales_order.project_ids:
                     export_sales_amount += sales_order.amount_untaxed
+                else:
+                    order_lines = sales_order.order_line
+                    for line in order_lines:
+                        if line.analytic_distribution:
+                            try:
+                                distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
+                                    else eval(line.analytic_distribution)
+                                
+                                for account_id, percentage in distribution.items():
+                                    account_id = int(account_id)
+                                    
+                                    if account_id in export_analytic_account_ids:
+                                        export_sales_amount += sales_order.amount_untaxed
+                                        break
+                            except Exception as e:
+                                _logger.error(f"Error processing analytic distribution for order {sales_order.id}: {e}")
 
         return {
             'sales_order_count': sales_order_count,
