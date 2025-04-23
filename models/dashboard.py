@@ -761,15 +761,21 @@ class L1Dashboard(models.Model):
                         # Check each analytic account in the distribution
                         for account_id, percentage in distribution.items():
                             account_id = int(account_id)  # Ensure integer
-                            
-                            # Calculate proportional expense based on distribution percentage
-                            proportional_expense = line.price_subtotal * (percentage / 100)
-                            
+
                             # Check if the account is in local or export project accounts
                             if account_id in local_analytic_account_ids:
-                                total_local_expense += proportional_expense
+                                total_local_expense += line.price_subtotal
                             if account_id in export_analytic_account_ids:
-                                total_export_expense += proportional_expense
+                                total_export_expense += line.price_subtotal                      
+                            
+                            # # Calculate proportional expense based on distribution percentage
+                            # proportional_expense = line.price_subtotal * (percentage / 100)
+                            
+                            # # Check if the account is in local or export project accounts
+                            # if account_id in local_analytic_account_ids:
+                            #     total_local_expense += proportional_expense
+                            # if account_id in export_analytic_account_ids:
+                            #     total_export_expense += proportional_expense
                     
                     except Exception as e:
                         # Log any errors in processing analytic distribution
