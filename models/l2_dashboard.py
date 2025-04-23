@@ -37,41 +37,27 @@ class L2Dashboard(models.Model):
 
     @api.depends('year', 'company_id')
     def _compute_dashboard_data(self):
-        """Compute and store dashboard data as JSON"""
         for record in self:
-            try:
-                record.dashboard_data = json.dumps(record._get_dashboard_data())
-                record.last_update = fields.Datetime.now()
-            except Exception as e:
-                record.dashboard_data = json.dumps({
-                    'error': _('Error generating dashboard data: %s') % str(e)
-                })
-                # Log error without crashing
-                self.env.cr.rollback()
-                self.env.cr.execute('SAVEPOINT dashboard_error')
-                self.env.logger.error("Dashboard data computation error: %s", str(e))
+            record.dashboard_data = json.dumps(record._get_dashboard_data())
+            record.last_update = fields.Datetime.now()
 
     @api.model
-    def get_dashboard_data_json(self, year=None, company_id=None):
-        """API method to fetch dashboard data in JSON format"""
-        year = str(year or fields.Date.today().year)
-        company_id = company_id or self.env.company.id
-        
-        # Find or create dashboard
+    def get_dashboard_data_json(self, year=None):
+        """API method to get dashboard data in JSON format"""
+        if not year:
+            year = fields.Date.today().year
+
         dashboard = self.search([
             ('year', '=', year),
-            ('company_id', '=', company_id),
-            ('active', '=', True)
+            ('company_id', '=', self.env.company.id)
         ], limit=1)
         
         if not dashboard:
             dashboard = self.create({
                 'year': year,
-                'company_id': company_id,
-                'name': _('L2 Dashboard - %s') % year
+                'company_id': self.env.company.id
             })
         
-        # Force recomputation
         dashboard._compute_dashboard_data()
         return dashboard.dashboard_data
 
@@ -114,43 +100,122 @@ class L2Dashboard(models.Model):
         return float_round(amount, precision_digits=2)
     
     def _get_sales_data(self, year):
-        """Calculate monthly sales data split between local and export"""
+        """
+        Calculate monthly sales data split between local and export
+        
+        This method retrieves all sales orders for the given year and categorizes
+        them as either local or export sales based on project tags or analytic accounts.
+        
+        Args:
+            year (int): The year for which to calculate sales data
+            
+        Returns:
+            dict: A dictionary containing total, local, and export sales data by month
+        """
         # Get month abbreviations (Jan, Feb, etc.)
         months = [datetime(2000, i+1, 1).strftime('%b') for i in range(12)]
         
+        # Initialize arrays to store monthly sales data
+        total_monthly = [0.0] * 12
+        local_monthly = [0.0] * 12
+        export_monthly = [0.0] * 12
+        
+        # Get all sales orders for the given year
         sales_orders = self.env['sale.order'].search([
             ('company_id', '=', self.company_id.id),
             ('state', 'in', ['sale', 'done']),
             ('date_order', '>=', f'{year}-01-01'),
             ('date_order', '<=', f'{year}-12-31')
         ])
-        # This is just placeholder data for demonstration
-        total_monthly = [0.0] * 12
-        local_monthly = [0.0] * 12
-        export_monthly = [0.0] * 12
-
+        
+        if not sales_orders:
+            return {
+                'total': {'months': months, 'amounts': total_monthly, 'sum': self._format_amount(0.0)},
+                'local_sales': {'months': months, 'amounts': local_monthly, 'sum': self._format_amount(0.0)},
+                'export_sales': {'months': months, 'amounts': export_monthly, 'sum': self._format_amount(0.0)},
+            }
+        
+        # Calculate total monthly sales first
         for order in sales_orders:
-            month = order.date_order.month - 1
-            total_monthly[month] += order.amount_total
-
+            month_idx = order.date_order.month - 1
+            total_monthly[month_idx] += order.amount_untaxed
+        
+        # Get local and export tags
         local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
         export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
-
-        local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])])
-        export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])])
-
-        for month in range(12):
-            for local_project in local_projects:
-                for sales_order in sales_orders:
-                    if sales_order.date_order.month - 1 == month and local_project in sales_order.project_ids:
-                        local_sales_amount = sales_order.amount_untaxed
-                        local_monthly[month] += local_sales_amount
-
-            for export_project in export_projects:
-                for sales_order in sales_orders:
-                    if sales_order.date_order.month - 1 == month and export_project in sales_order.project_ids:
-                        export_sales_amount = sales_order.amount_untaxed
-                        export_monthly[month] += export_sales_amount
+        
+        # Get projects with local and export tags
+        local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])]) if local_tag else self.env['project.project']
+        export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])]) if export_tag else self.env['project.project']
+        
+        # Get analytic account IDs for local and export projects
+        local_analytic_account_ids = set(local_projects.mapped('analytic_account_id').ids) if local_projects else set()
+        export_analytic_account_ids = set(export_projects.mapped('analytic_account_id').ids) if export_projects else set()
+        
+        # Process each sales order once with better performance
+        for order in sales_orders:
+            month_idx = order.date_order.month - 1
+            order_amount = order.amount_untaxed
+            
+            # Check if order is related to local or export projects
+            order_projects = order.project_ids if hasattr(order, 'project_ids') else self.env['project.project']
+            
+            # If order directly linked to projects
+            if order_projects:
+                if any(project in local_projects for project in order_projects):
+                    local_monthly[month_idx] += order_amount
+                    continue
+                elif any(project in export_projects for project in order_projects):
+                    export_monthly[month_idx] += order_amount
+                    continue
+            
+            # If not directly linked to projects, check analytic distribution
+            is_local = False
+            is_export = False
+            
+            for line in order.order_line:
+                if not line.analytic_distribution:
+                    continue
+                    
+                try:
+                    # Handle analytic_distribution which could be a string or dict
+                    distribution = line.analytic_distribution
+                    if not isinstance(distribution, dict):
+                        distribution = eval(distribution)
+                    
+                    line_amount = line.price_subtotal
+                    line_percentage = 0.0
+                    
+                    for account_id_str, percentage in distribution.items():
+                        account_id = int(account_id_str)
+                        
+                        if account_id in local_analytic_account_ids:
+                            is_local = True
+                            line_percentage += float(percentage)
+                        elif account_id in export_analytic_account_ids:
+                            is_export = True
+                            line_percentage += float(percentage)
+                    
+                    # Apply proportional amount based on percentage
+                    if line_percentage > 0:
+                        proportion = line_percentage / 100.0
+                        if is_local:
+                            local_monthly[month_idx] += line_amount * proportion
+                        if is_export:
+                            export_monthly[month_idx] += line_amount * proportion
+                    
+                except Exception as e:
+                    _logger.error(f"Error processing analytic distribution for order {order.id}, line {line.id}: {e}")
+            
+            # If we couldn't determine through analytic accounts and no percentage was applied
+            if not is_local and not is_export:
+                # Default categorization logic if needed
+                pass
+        
+        # Round values for better display
+        total_monthly = [round(amount, 2) for amount in total_monthly]
+        local_monthly = [round(amount, 2) for amount in local_monthly]
+        export_monthly = [round(amount, 2) for amount in export_monthly]
         
         return {
             'total': {
