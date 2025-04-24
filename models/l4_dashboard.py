@@ -167,8 +167,11 @@ class L4Dashboard(models.Model):
         local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
         export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
         
-        # Define project domain
-        project_domain = []
+        # Define project domain with date range
+        project_domain =  [
+            ('company_id', '=', self.company_id.id),
+            # ('date_start', '<=', end_date)
+        ]
         
         # Filter by tag type if specified
         if tag_type:
@@ -185,9 +188,7 @@ class L4Dashboard(models.Model):
                     tag_ids.append(export_tag.id)
                 if tag_ids:
                     project_domain.append(('tag_ids', 'in', tag_ids))
-        
-        # Project filtering removed as per requirement
-        
+
         # Search for projects
         projects = self.env['project.project'].search(project_domain)
         
