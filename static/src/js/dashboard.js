@@ -47,31 +47,46 @@ export class Dashboard extends Component {
                 align: 'right',
                 verticalAlign: 'middle'
             },
+            tooltip: {
+                useHTML: true,
+                backgroundColor: '#000',       // dark background
+                borderRadius: 8,               // rounded corners
+                borderWidth: 0,                // no border
+                style: {
+                    color: '#fff',             // white text
+                    fontSize: '16px',          // ⬆️ bigger font
+                    padding: 12                // ⬆️ more padding
+                },
+                formatter: function () {
+                    const formattedValue = Highcharts.numberFormat(this.y, 0, '.', ',');
+                    return `<b style="color:${this.point.color}; font-size: 16px;">${this.point.name}</b>: 
+                            <span style="font-weight: bold; font-size: 16px;">${formattedValue}</span>`;
+                }
+            },
             plotOptions: {
                 pie: {
                     allowPointSelect: false,
                     cursor: 'pointer',
                     depth: 35,
-                    showInLegend: true, 
+                    showInLegend: true,
                     size: "90%",
                     dataLabels: {
                         enabled: true,
                         useHTML: true,
-                        distance: -40,  // 🔴 Raqamlarni pie bo‘lagi ichiga joylashtirish
-                        verticalAlign: 'middle', // 🔴 O‘rtada ushlab turish
-                        crop: false, overflow: 'none',
+                        distance: -40,
                         formatter: function () {
-                            let formattedValue = Highcharts.numberFormat(this.y, 0, '.', ','); // Format number
-                            let bgColor = this.point.color === '#1e88e5' ? '#ff8f00' : '#1e88e5'; // 🔀 Ranglarni almashtirish
+                            let formattedValue = Highcharts.numberFormat(this.y, 0, '.', ',');
+                            let bgColor = this.point.color || '#007bff';
                             return `<div style="
-                                background-color: ${bgColor};  
-                                    color: #fff; 
-                                    padding: 5px 10px; 
-                                    border-radius: 5px;
-                                    border: 1px solid black;
-                                    font-weight: bold;
-                                    font-size: 16px;
-                                ">${formattedValue}</div>`;
+                                background-color: ${bgColor}; 
+                                color: #fff; 
+                                padding: 4px 10px; 
+                                border-radius: 8px;
+                                font-weight: 600;
+                                font-size: 14px;
+                                text-align: center;
+                                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                            ">${formattedValue}</div>`;
                         },
                         align: 'center'
                     }
@@ -80,11 +95,13 @@ export class Dashboard extends Component {
             series: [{
                 type: 'pie',
                 name: 'Count',
-                colors: ['#1e88e5', '#ff8f00'],
+                colors: ['#4e79a7', '#f28e2c'],
                 data: data
             }]
         });
     }
+    
+    
 
     drawBar() {
         const categories = this.state.main_data.hr?.categories.map(item => item.name);

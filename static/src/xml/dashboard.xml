@@ -1,130 +1,91 @@
 <templates>
+    <!-- L1 Dashboard Page -->
     <t t-name="custom.dashboard" owl="1">
         <div class="dashboard-wrapper">
             <div class="dashboard-container d-flex gap-2 border-2 p-2">
-                <div class="cards d-flex flex-column gap-2">
-                    <div class="card">
-                        <h3><t t-esc="this.state.main_data.sales?.order_count || 0"/></h3>
-                        <p>SALES ORDER</p>
-                    </div>
-                    <div class="card">
-                        <h3><t t-esc="this.state.main_data.sales?.amount || 0"/></h3>
-                        <p>SALES</p>
-                    </div>
-                    <div class="card">
-                        <h3><t t-esc="this.state.main_data.sales?.target || 0"/></h3>
-                        <p>SALES TARGET - Fixed (Year)</p>
-                    </div>
-                    <div class="card">
-                        <h3><t t-esc="this.state.main_data.sales?.target_achievement || 0"/></h3>
-                        <p>TARGET-ACHIEVEMENT</p>
-                    </div>
-                    <div class="card">
-                        <h3><t t-esc="this.state.main_data.revenue?.amount || 0"/></h3>
-                        <p>REVENUE Income</p>
-                    </div>
-                    <div class="card">
-                        <h3><t t-esc="this.state.main_data.revenue?.cost_of_revenue || 0"/></h3>
-                        <p>COST OF REVENUE</p>
-                    </div>
-                    <div class="card">
-                        <h3 class='bg-green'><t t-esc="this.state.main_data.revenue?.gross_profit || 0"/></h3>
-                        <p>GROSS PROFIT</p>
-                    </div>
-                    <div class="card">
-                        <h3 class='bg-green'><t t-esc="this.state.main_data.revenue?.gross_profit_margin || 0"/></h3>
-                        <p>GROSS PROFIT MARGIN (%)</p>
-                    </div>
-                    <div class="card">
-                        <h3><t t-esc="this.state.main_data.revenue?.expenses || 0"/></h3>
-                        <p>EXPENSES</p>
-                    </div>
-                    <div class="card">
-                        <h3 class='bg-green'><t t-esc="this.state.main_data.revenue?.net_profit || 0"/></h3>
-                        <p>NET PROFIT</p>
-                    </div>
-                    <div class="card">
-                        <h3 class='bg-green'><t t-esc="this.state.main_data.revenue?.net_profit_margin || 0"/></h3>
-                        <p>NET PROFIT MARGIN (%)</p>
-                    </div>
-                    <div class="card">
-                        <h3><t t-esc="this.state.main_data.revenue?.accounts_receivable || 0"/></h3>
-                        <p>ACCOUNT RECEIVABLE</p>
-                    </div>
-                    <div class="card">
-                        <h3><t t-esc="this.state.main_data.revenue?.accounts_payable || 0"/></h3>
-                        <p>ACCOUNT PAYABLE</p>
-                    </div>
-                    <div class="card">
-                        <h3><t t-esc="this.state.main_data.hr?.total_employees || 0"/></h3>
-                        <p>TOTAL EMPLOYEE</p>
-                    </div>
+                <!-- Left section - card data -->
+                <div class="cards w-33 d-flex flex-column gap-2" style="max-width: 33%;">
+                    <div class="card"><h3><t t-esc="state.main_data.sales?.order_count || 0" /></h3><p>SALES ORDER</p></div>
+                    <div class="card"><h3><t t-esc="state.main_data.sales?.amount || 0" /></h3><p>SALES</p></div>
+                    <div class="card"><h3><t t-esc="state.main_data.sales?.target || 0" /></h3><p>SALES TARGET - Fixed (Year)</p></div>
+                    <div class="card"><h3><t t-esc="state.main_data.sales?.target_achievement || 0" /></h3><p>TARGET-ACHIEVEMENT</p></div>
+                    <div class="card"><h3><t t-esc="state.main_data.revenue?.amount || 0" /></h3><p>REVENUE Income</p></div>
+                    <div class="card"><h3><t t-esc="state.main_data.revenue?.cost_of_revenue || 0" /></h3><p>COST OF REVENUE</p></div>
+                    <div class="card"><h3 class="bg-green"><t t-esc="state.main_data.revenue?.gross_profit || 0" /></h3><p>GROSS PROFIT</p></div>
+                    <div class="card"><h3 class="bg-green"><t t-esc="state.main_data.revenue?.gross_profit_margin || 0" /></h3><p>GROSS PROFIT MARGIN (%)</p></div>
+                    <div class="card"><h3><t t-esc="state.main_data.revenue?.expenses || 0" /></h3><p>EXPENSES</p></div>
+                    <div class="card"><h3 class="bg-green"><t t-esc="state.main_data.revenue?.net_profit || 0" /></h3><p>NET PROFIT</p></div>
+                    <div class="card"><h3 class="bg-green"><t t-esc="state.main_data.revenue?.net_profit_margin || 0" /></h3><p>NET PROFIT MARGIN (%)</p></div>
+                    <div class="card"><h3><t t-esc="state.main_data.revenue?.accounts_receivable || 0" /></h3><p>ACCOUNT RECEIVABLE</p></div>
+                    <div class="card"><h3><t t-esc="state.main_data.revenue?.accounts_payable || 0" /></h3><p>ACCOUNT PAYABLE</p></div>
+                    <div class="card"><h3><t t-esc="state.main_data.hr?.total_employees || 0" /></h3><p>TOTAL EMPLOYEE</p></div>
                 </div>
-                <div class="graphs d-flex">
-                    <div class='graph-container'>
+                
+                <!-- Right section - graphs -->
+                <div class="graphs w-66 d-grid" style="grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="graph-container">
                         <p>
-                            <!-- <span class="graph_text" style="background-color: lightblue">Sales</span> -->
-                            <a href="/web#action=my_dashboard.action_l2_dashboard" 
-                                class="graph_text" 
-                                style="background-color: lightblue; text-decoration: none; display: inline-block; cursor: pointer;">Sales</a>
+                            <a href="/web#action=my_dashboard.action_l2_dashboard"
+                                class="graph_text"
+                                style="background-color: lightblue; text-decoration: none; display: inline-block; cursor: pointer;">
+                                Sales</a>
                         </p>
-                        <div class="graph" id='sales'></div>
+                        <div class="graph" id="sales"></div>
                     </div>
-                    <div class='graph-container'>
+                    <div class="graph-container">
                         <p>
-                            <!-- <span class="graph_text" style="background-color: lightgreen">Cash Flow</span> -->
-                            <a href="/web#action=my_dashboard.action_l2_dashboard" 
-                                class="graph_text" 
-                                style="background-color: lightgreen; text-decoration: none; display: inline-block; cursor: pointer;">Cash Flow</a>
+                            <a href="/web#action=my_dashboard.action_l2_dashboard"
+                                class="graph_text"
+                                style="background-color: lightgreen; text-decoration: none; display: inline-block; cursor: pointer;">
+                                Cash Flow</a>
                         </p>
-                        <div class="graph" id='cash'></div>
+                        <div class="graph" id="cash"></div>
                     </div>
-                    <div class='graph-container'>
+                    <div class="graph-container">
                         <p>
-                            <!-- <span class="graph_text" style="background-color: lightcoral">Revenue</span> -->
-                            <a href="/web#action=my_dashboard.action_l2_dashboard" 
-                                class="graph_text" 
-                                style="background-color: lightcoral; text-decoration: none; display: inline-block; cursor: pointer;">Revenue</a>
+                            <a href="/web#action=my_dashboard.action_l2_dashboard"
+                                class="graph_text"
+                                style="background-color: lightcoral; text-decoration: none; display: inline-block; cursor: pointer;">
+                                Revenue</a>
                         </p>
-                        <div class="graph" id='revenue'></div>
+                        <div class="graph" id="revenue"></div>
                     </div>
-                    <div class='graph-container'>
+                    <div class="graph-container">
                         <p>
-                            <!-- <span class="graph_text" style="background-color: orange">Cost of Revenue</span> -->
-                            <a href="/web#action=my_dashboard.action_l2_dashboard" 
-                                class="graph_text" 
-                                style="background-color: orange; text-decoration: none; display: inline-block; cursor: pointer;">Cost of Revenue</a>
+                            <a href="/web#action=my_dashboard.action_l2_dashboard"
+                                class="graph_text"
+                                style="background-color: orange; text-decoration: none; display: inline-block; cursor: pointer;">
+                                Cost of Revenue</a>
                         </p>
-                        <div class="graph" id='expenses'></div>
+                        <div class="graph" id="expenses"></div>
                     </div>
                 </div>
             </div>
-            <br />
-            <br />
-            <p style="display: flex; width: 100%; justify-content-center"><span class="bg-yellow hr_title">Human Resources</span></p>
-            <div class="dashboard-hr">
-                <div class="hr-card">
-                    <p>
-                        <span class="graph_text" style="background: #7a7aff;">Total Employee By Department</span>
-                    </p>
-                    <div class="hr-graph" id="department"></div>
-                </div>
-                <div class="hr-card">
-                    <p>
-                       <span class="graph_text" style="background: #7a7aff;">Total Employee By Gender</span>
-                    </p>
-                    <div class="hr-graph" id="gender"></div>
-                </div>
-                <div class="hr-card">
-                    <p>
-                       <span class="graph_text" style="background: #7a7aff;">Employee Count By Category</span>
-                    </p>
-                    <div class="hr-graph" id="category"></div>
+        
+            <!-- HR Graph Section -->
+            <div class="mt-4 mb-4">
+                <p class="text-center w-100">
+                    <span class="bg-yellow hr_title">Human Resources</span>
+                </p>
+                <div class="dashboard-hr">
+                    <div class="hr-card">
+                        <p><span class="graph_text" style="background: #7a7aff;">Total Employee By Department</span></p>
+                        <div class="hr-graph" id="department"></div>
+                    </div>
+                    <div class="hr-card">
+                        <p><span class="graph_text" style="background: #7a7aff;">Total Employee By Gender</span></p>
+                        <div class="hr-graph" id="gender"></div>
+                    </div>
+                    <div class="hr-card">
+                        <p><span class="graph_text" style="background: #7a7aff;">Employee Count By Category</span></p>
+                        <div class="hr-graph" id="category"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </t>
 
+    <!-- L2 Dashboard Page -->
     <t t-name="custom.l2_dashboard" owl="1" style="display: None;">
         <div class="l2-dashboard-container">
             <div t-if="state.isLoading" class="text-center my-5">
@@ -136,49 +97,16 @@
 
             <div t-if="!state.isLoading" class="dashboard-content">
                 <div class="alert alert-danger" t-if="state.error">
-                    <strong>Error:</strong> <t t-esc="state.error"/>
+                    <strong>Error:</strong>
+                    <t t-esc="state.error" />
                 </div>
-                
+
                 <div t-if="!state.error" class="dashboard-wrapper">
-                    <!-- <div class="row mb-4">
-                        <div class="col-12">
-                            <div class="card shadow-sm">
-                                <div class="card-header bg-primary text-white">
-                                    <h5 class="card-title mb-0">
-                                        <i class="fa fa-chart-line me-2"/>Sales Overview
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="dashboard-stats row text-center mb-4">
-                                        <div class="col-md-4">
-                                            <h3 class="text-primary">
-                                                <t t-esc="formatCurrency(state.data.sales.total.sum)"/>
-                                            </h3>
-                                            <p class="text-muted">Total Sales</p>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <h3 class="text-success">
-                                                <t t-esc="formatCurrency(state.data.sales.local_sales.sum)"/>
-                                            </h3>
-                                            <p class="text-muted">Local Sales</p>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <h3 class="text-info">
-                                                <t t-esc="formatCurrency(state.data.sales.export_sales.sum)"/>
-                                            </h3>
-                                            <p class="text-muted">Export Sales</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div> -->
 
                     <div class="row">
                         <div class="card-header bg-primary text-white">
                             <h5 class="card-title mb-0">
-                                <i class="fa fa-chart-line me-2"/>Sales Overview
-                            </h5>
+                                <i class="fa fa-chart-line me-2" />Sales Overview </h5>
                         </div>
                     </div>
 
@@ -189,7 +117,8 @@
                                     <h5 class="card-title mb-0">Total Sales</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div t-ref="totalSalesChart" class="chart-container" style="height: 300px;"></div>
+                                    <div t-ref="totalSalesChart" class="chart-container"
+                                        style="height: 300px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -199,7 +128,8 @@
                                     <h5 class="card-title mb-0">Local Sales</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div t-ref="localSalesChart" class="chart-container" style="height: 300px;"></div>
+                                    <div t-ref="localSalesChart" class="chart-container"
+                                        style="height: 300px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -209,51 +139,17 @@
                                     <h5 class="card-title mb-0">Export Sales</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div t-ref="exportSalesChart" class="chart-container" style="height: 300px;"></div>
+                                    <div t-ref="exportSalesChart" class="chart-container"
+                                        style="height: 300px;"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="row mb-4">
-                        <!-- <div class="col-12">
-                            <div class="card shadow-sm">
-                                <div class="card-header bg-primary text-white">
-                                    <h5 class="card-title mb-0">
-                                        <i class="fa fa-chart-line me-2"/>Sales Overview
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="dashboard-stats row text-center mb-4">
-                                        <div class="col-md-4">
-                                            <h3 class="text-primary">
-                                                <t t-esc="formatCurrency(state.data.sales.total.sum)"/>
-                                            </h3>
-                                            <p class="text-muted">Total Sales</p>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <h3 class="text-success">
-                                                <t t-esc="formatCurrency(state.data.sales.local_sales.sum)"/>
-                                            </h3>
-                                            <p class="text-muted">Local Sales</p>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <h3 class="text-info">
-                                                <t t-esc="formatCurrency(state.data.sales.export_sales.sum)"/>
-                                            </h3>
-                                            <p class="text-muted">Export Sales</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div> -->
-                    </div>
-
                     <div class="row">
                         <div class="card-header bg-primary text-white">
                             <h5 class="card-title mb-0">
-                                <i class="fa fa-chart-line me-2"/>Revenue Overview
-                            </h5>
+                                <i class="fa fa-chart-line me-2" />Revenue Overview </h5>
                         </div>
                     </div>
 
@@ -264,7 +160,8 @@
                                     <h5 class="card-title mb-0">Total Revenue</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div t-ref="totalRevenueChart" class="chart-container" style="height: 300px;"></div>
+                                    <div t-ref="totalRevenueChart" class="chart-container"
+                                        style="height: 300px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -274,7 +171,8 @@
                                     <h5 class="card-title mb-0">Local Revenue</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div t-ref="localRevenueChart" class="chart-container" style="height: 300px;"></div>
+                                    <div t-ref="localRevenueChart" class="chart-container"
+                                        style="height: 300px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -284,52 +182,17 @@
                                     <h5 class="card-title mb-0">Export Revenue</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div t-ref="exportRevenueChart" class="chart-container" style="height: 300px;"></div>
+                                    <div t-ref="exportRevenueChart" class="chart-container"
+                                        style="height: 300px;"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Expenses -->
-                    <!-- <div class="row mb-4">
-                        <div class="col-12">
-                            <div class="card shadow-sm">
-                                <div class="card-header bg-primary text-white">
-                                    <h5 class="card-title mb-0">
-                                        <i class="fa fa-chart-line me-2"/>Sales Overview
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="dashboard-stats row text-center mb-4">
-                                        <div class="col-md-4">
-                                            <h3 class="text-primary">
-                                                <t t-esc="formatCurrency(state.data.sales.total.sum)"/>
-                                            </h3>
-                                            <p class="text-muted">Total Sales</p>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <h3 class="text-success">
-                                                <t t-esc="formatCurrency(state.data.sales.local_sales.sum)"/>
-                                            </h3>
-                                            <p class="text-muted">Local Sales</p>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <h3 class="text-info">
-                                                <t t-esc="formatCurrency(state.data.sales.export_sales.sum)"/>
-                                            </h3>
-                                            <p class="text-muted">Export Sales</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div> -->
-
                     <div class="row">
                         <div class="card-header bg-primary text-white">
                             <h5 class="card-title mb-0">
-                                <i class="fa fa-chart-line me-2"/>Expenses Overview
-                            </h5>
+                                <i class="fa fa-chart-line me-2" />Expenses Overview </h5>
                         </div>
                     </div>
 
@@ -340,7 +203,8 @@
                                     <h5 class="card-title mb-0">Total Expenses</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div t-ref="totalExpensesChart" class="chart-container" style="height: 300px;"></div>
+                                    <div t-ref="totalExpensesChart" class="chart-container"
+                                        style="height: 300px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -350,7 +214,8 @@
                                     <h5 class="card-title mb-0">Local Expenses</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div t-ref="localExpensesChart" class="chart-container" style="height: 300px;"></div>
+                                    <div t-ref="localExpensesChart" class="chart-container"
+                                        style="height: 300px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -360,52 +225,17 @@
                                     <h5 class="card-title mb-0">Export Expenses</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div t-ref="exportExpensesChart" class="chart-container" style="height: 300px;"></div>
+                                    <div t-ref="exportExpensesChart" class="chart-container"
+                                        style="height: 300px;"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- CashFlow -->
-                    <!-- <div class="row mb-4">
-                        <div class="col-12">
-                            <div class="card shadow-sm">
-                                <div class="card-header bg-primary text-white">
-                                    <h5 class="card-title mb-0">
-                                        <i class="fa fa-chart-line me-2"/>Sales Overview
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="dashboard-stats row text-center mb-4">
-                                        <div class="col-md-4">
-                                            <h3 class="text-primary">
-                                                <t t-esc="formatCurrency(state.data.sales.total.sum)"/>
-                                            </h3>
-                                            <p class="text-muted">Total Sales</p>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <h3 class="text-success">
-                                                <t t-esc="formatCurrency(state.data.sales.local_sales.sum)"/>
-                                            </h3>
-                                            <p class="text-muted">Local Sales</p>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <h3 class="text-info">
-                                                <t t-esc="formatCurrency(state.data.sales.export_sales.sum)"/>
-                                            </h3>
-                                            <p class="text-muted">Export Sales</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div> -->
-
                     <div class="row">
                         <div class="card-header bg-primary text-white">
                             <h5 class="card-title mb-0">
-                                <i class="fa fa-chart-line me-2"/>CashFlow Overview
-                            </h5>
+                                <i class="fa fa-chart-line me-2" />CashFlow Overview </h5>
                         </div>
                     </div>
 
@@ -416,7 +246,8 @@
                                     <h5 class="card-title mb-0">Total CashFlow</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div t-ref="totalCashFlowChart" class="chart-container" style="height: 300px;"></div>
+                                    <div t-ref="totalCashFlowChart" class="chart-container"
+                                        style="height: 300px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -426,7 +257,8 @@
                                     <h5 class="card-title mb-0">Local CashFlow</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div t-ref="localCashFlowChart" class="chart-container" style="height: 300px;"></div>
+                                    <div t-ref="localCashFlowChart" class="chart-container"
+                                        style="height: 300px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -436,14 +268,194 @@
                                     <h5 class="card-title mb-0">Export CashFlow</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div t-ref="exportCashFlowChart" class="chart-container" style="height: 300px;"></div>
+                                    <div t-ref="exportCashFlowChart" class="chart-container"
+                                        style="height: 300px;"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="text-end text-muted mt-2">
-                        <small>Last updated: <t t-esc="formatDateTime(state.data.last_update)"/></small>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- L4 Dashboard Page -->
+    <t t-name="custom.l4_dashboard" owl="1">
+        <div class="l4-dashboard-container py-3 px-4">
+            <div class="mb-2 p-2 bg-primary text-white fw-bold rounded">Project Delivery Report</div>
+            <!-- Dashboard Content -->
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
+                        <thead>
+                            <tr class="bg-light">
+                                <th class="border-end fw-bold" style="position: sticky; left: 0; z-index: 10; background-color: #f8f9fa;">Region</th>
+                                <th class="border-end fw-bold text-nowrap">Project</th>
+                                <th class="border-end fw-bold text-nowrap">Customer</th>
+                                <th class="border-end fw-bold text-nowrap">Date</th>
+                                <th class="border-end fw-bold text-nowrap text-end">PO Value</th>
+                                <th class="border-end fw-bold text-nowrap text-end">Invoiced</th>
+                                <th class="border-end fw-bold text-nowrap text-end">Collected</th>
+                                <th class="border-end fw-bold text-nowrap text-end text-danger">Pending Collection</th>
+                                <th class="border-end fw-bold text-nowrap text-end">Outstanding Aging</th>
+                                <th class="border-end fw-bold text-nowrap text-end">Vendor Invoice</th>
+                                <th class="border-end fw-bold text-nowrap text-end">Payment Made</th>
+                                <th class="border-end fw-bold text-nowrap text-end">Payment Pending</th>
+                                <th class="border-end fw-bold text-nowrap text-end text-danger">Payroll Cost</th>
+                                <th class="border-end fw-bold text-nowrap text-end">Total Outgoing</th>
+                                <th class="border-end fw-bold text-nowrap text-end">Total Margin</th>
+                                <th class="fw-bold text-nowrap text-end">Margin %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-set="total" t-value="{
+                                po_value: 0, invoiced: 0, collected: 0, pending_collection: 0,
+                                outstanding: 0, vendor_invoice: 0, payment_made: 0,
+                                payment_to_be_made: 0, payroll_cost: 0, total_outgoing: 0, total_margin: 0
+                            }" />
+
+                            <t t-if="!this.state.main_data.projects || this.state.main_data.projects.length === 0">
+                                <tr>
+                                    <td colspan="16" class="text-center py-4">
+                                        <div class="text-muted">
+                                            <i class="fa fa-info-circle me-1" /> No projects found matching the current filters
+                                        </div>
+                                    </td>
+                                </tr>
+                            </t>
+
+                            <t t-foreach="this.state.main_data.projects || []" t-as="row" t-key="row.project">
+                                <tr class="project-row cursor-pointer" t-att-data-project-id="row.id">
+                                    <td class="border-end" style="position: sticky; left: 0; z-index: 5; background-color: inherit;">
+                                        <div class="d-flex align-items-center">
+                                            <span t-att-class="row.region === 'Local' ? 'badge bg-info me-2' : 'badge bg-success me-2'">
+                                                <t t-esc="row.region" />
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.project" />
+                                    </td>
+                                    <td class="border-end">
+                                        <t t-esc="row.customer" />
+                                    </td>
+                                    <td class="border-end text-nowrap">
+                                        <t t-esc="row.date" />
+                                    </td>
+                                    <td class="border-end text-end">
+                                        <t t-esc="row.po_value" />
+                                    </td>
+                                    <td class="border-end text-end">
+                                        <t t-esc="row.invoiced" />
+                                    </td>
+                                    <td class="border-end text-end">
+                                        <t t-esc="row.collected" />
+                                    </td>
+                                    <td class="border-end text-end fw-bold" t-att-class="row.pending_collection > 0 ? 'text-danger' : ''">
+                                        <t t-esc="row.pending_collection" />
+                                    </td>
+                                    <td class="border-end text-end">
+                                        <t t-esc="row.outstanding_aging" />
+                                    </td>
+                                    <td class="border-end text-end">
+                                        <t t-esc="row.vendor_invoice" />
+                                    </td>
+                                    <td class="border-end text-end">
+                                        <t t-esc="row.payment_made" />
+                                    </td>
+                                    <td class="border-end text-end">
+                                        <t t-esc="row.payment_to_be_made" />
+                                    </td>
+                                    <td class="border-end text-end" t-attf-class="text-danger border-end text-end">
+                                        <t t-esc="row.payroll_cost" />
+                                    </td>
+                                    <td class="border-end text-end">
+                                        <t t-esc="row.total_outgoing" />
+                                    </td>
+                                    <td class="border-end text-end" t-att-class="row.total_margin lt 0 ? 'text-danger' : 'text-success'">
+                                        <t t-esc="row.total_margin" />
+                                    </td>
+                                    <td class="text-end" t-att-class="row.margin_percent lt 0 ? 'text-danger' : 
+                                                                                                    (row.margin_percent gte 20 ? 'text-success fw-bold' : '')">
+                                        <t t-esc="row.margin_percent" />
+                                    </td>
+                                    
+                                    <!-- Update total values -->
+                                    <t t-set="total.po_value" t-value="total.po_value + row.po_value" />
+                                    <t t-set="total.invoiced" t-value="total.invoiced + row.invoiced" />
+                                    <t t-set="total.collected" t-value="total.collected + row.collected" />
+                                    <t t-set="total.pending_collection" t-value="total.pending_collection + row.pending_collection" />
+                                    <t t-set="total.outstanding" t-value="total.outstanding + (row.outstanding_aging || 0)" />
+                                    <t t-set="total.vendor_invoice" t-value="total.vendor_invoice + row.vendor_invoice" />
+                                    <t t-set="total.payment_made" t-value="total.payment_made + row.payment_made" />
+                                    <t t-set="total.payment_to_be_made" t-value="total.payment_to_be_made + row.payment_to_be_made" />
+                                    <t t-set="total.payroll_cost" t-value="total.payroll_cost + row.payroll_cost" />
+                                    <t t-set="total.total_outgoing" t-value="total.total_outgoing + row.total_outgoing" />
+                                    <t t-set="total.total_margin" t-value="total.total_margin + row.total_margin" />
+                                </tr>
+                            </t>
+
+                            <!-- Totals Row -->
+                            <tr class="fw-bold bg-light">
+                                <td class="border-end" style="position: sticky; left: 0; z-index: 5; background-color: #f8f9fa;">
+                                    <span class="text-uppercase">Totals</span>
+                                </td>
+                                <td class="border-end" colspan="3"></td>
+                                <td class="border-end text-end">
+                                    <t t-esc="total.po_value" />
+                                </td>
+                                <td class="border-end text-end">
+                                    <t t-esc="total.invoiced" />
+                                </td>
+                                <td class="border-end text-end">
+                                    <t t-esc="total.collected" />
+                                </td>
+                                <td class="border-end text-end" t-att-class="total.pending_collection > 0 ? 'text-danger' : ''">
+                                    <t t-esc="total.pending_collection" />
+                                </td>
+                                <td class="border-end text-end">
+                                    <t t-esc="0" />
+                                </td>
+                                <td class="border-end text-end">
+                                    <t t-esc="total.vendor_invoice" />
+                                </td>
+                                <td class="border-end text-end">
+                                    <t t-esc="total.payment_made" />
+                                </td>
+                                <td class="border-end text-end">
+                                    <t t-esc="total.payment_to_be_made" />
+                                </td>
+                                <td class="border-end text-end text-danger">
+                                    <t t-esc="total.payroll_cost" />
+                                </td>
+                                <td class="border-end text-end">
+                                    <t t-esc="total.total_outgoing" />
+                                </td>
+                                <td class="border-end text-end" t-att-class="total.total_margin lt 0 ? 'text-danger' : 'text-success'">
+                                    <t t-esc="total.total_margin" />
+                                </td>
+                                <td class="text-end">
+                                    <t t-esc="0" />
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Summary and Legend -->
+                <div class="p-3 border-top d-flex justify-content-between">
+                    <div class="text-muted small">
+                        <i class="fa fa-info-circle me-1"></i> Click on any project row to view detailed breakdown
+                    </div>
+                    <div class="d-flex gap-3">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-info me-1">Local</span>
+                            <span class="text-muted small">Domestic Projects</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-success me-1">Export</span>
+                            <span class="text-muted small">International Projects</span>
+                        </div>
                     </div>
                 </div>
             </div>

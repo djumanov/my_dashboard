@@ -4,3 +4,4 @@ access_l1_dashboard_manager,l1.dashboard.manager,model_l1_dashboard,base.group_s
 access_sale_target_admin,sale_target_admin,model_sale_target,base.group_system,1,1,1,1
 access_sale_target_ceo,sale_target_ceo,model_sale_target,base.group_partner_manager,1,1,1,1
 access_l2_dashboard_user,l2.dashboard.user,model_l2_dashboard,base.group_user,1,1,1,1
+access_l4_dashboard_user,l4.dashboard.user,model_l4_dashboard,base.group_user,1,1,1,1

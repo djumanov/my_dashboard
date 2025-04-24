@@ -4,31 +4,52 @@
         <field name="name">l1.dashboard.form</field>
         <field name="model">l1.dashboard</field>
         <field name="arch" type="xml">
-            <form string="L1 Dashboard" class="dashboard-form" create="0" edit="0">
-                <sheet style="width: 100%">
-                    <h1 class='text-center text_shadow'>
-                        L1 Dashboard
-                    </h1>
-                    <br />
-                    <group col="3" class="o_dashboard_header">
-                        <group>
-                            <field name="year"
-                            placeholder="Select Year"/>
-                        </group>
-                        <group>
-                            <field name="quarter"
-                            placeholder="Select Quarter"/>
-                        </group>
-                        <group>
-                            <field name="month"
-                            placeholder="Select Month"/>
-                        </group>
-                        <field name="company_id" groups="base.group_multi_company" invisible="1"/>
-                        <field name="currency_id" invisible="1"/>
-                        <field name="last_update" readonly="1" invisible="1"/>
-                    </group>
+            <form string="L1 Dashboard" class="dashboard-form" create="0" edit="0" style="position: relative;">
+                <style>
+                    .o_control_panel {
+                        border-bottom: 0;
+                        padding-top: 0;
+                        padding-right: 0;
+                        padding-bottom: 0;
+                        padding-left: 0;
+                        visibility: hidden;
+                    }
+                    .o_form_nosheet {
+                        padding-top: 0;
+                    }
+                </style>
+                <div class="o_form_view_container" style="width: 90%; margin: auto;">
+                    <!-- Header section with Dashboard title on the left and filters on the right -->
+                    <div class="row align-items-center mt-3 mb-2">
+                        
+                        <!-- Left side (Dashboard Title) -->
+                        <div class="col-md-6 col-sm-12 text-start">
+                            <h1 class="my-0" style="text-align: right;">L1 Dashboard</h1>
+                        </div>
+
+                        <!-- Right side (Filters) -->
+                        <div class="col-md-6 col-sm-12 d-flex flex-wrap justify-content-center justify-content-start" style="gap: 10px; text-align: center;">
+                            <field name="year" placeholder="Select Year" class="mx-1 my-1"/>
+                            <field name="month" placeholder="Select Month" class="mx-1 my-1"/>
+                            <field name="quarter" placeholder="Select Quarter" class="mx-1 my-1"/>
+                        </div>
+
+                    </div>
+
+                    <!-- Last update info aligned to right -->
+                    <div class="row mb-3">
+                        <div class="col-12 text-end pe-3">
+                            <span>Last update: <field name="last_update" readonly="1" class="d-inline"/></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Dashboard content -->
                     <field name="dashboard_data" readonly="1" nolabel='1' widget="dashboard"/>
-                </sheet>
+                    
+                    <!-- Hidden fields -->
+                    <field name="company_id" groups="base.group_multi_company" invisible="1"/>
+                    <field name="currency_id" invisible="1"/>
+                </div>
             </form>
         </field>
     </record>

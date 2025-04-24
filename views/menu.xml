@@ -19,4 +19,11 @@
               parent="menu_l1_dashboard_root"
               action="action_sale_target"
               sequence="10"/>
+
+    <!-- L4 Menu Test -->
+    <menuitem id="menu_l4_dashboard_test"
+              name="L4 Dashboard Test Menu"
+              parent="menu_l1_dashboard_root"
+              action="action_l4_dashboard"
+              sequence="11"/>
 </odoo>

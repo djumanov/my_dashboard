@@ -1,142 +1,170 @@
 .dashboard-form {
+    // Highcharts overrides
+    rect:hover {
+        fill: #fff !important;
+    }
+    .highcharts-background {
+        fill: #fff;
+    }
+    .highcharts-credits {
+        display: none;
+    }
+    .highcharts-color-0 {
+        fill: #1e88e5 !important;
+        stroke: #1e88e5 !important;
+    }
+    .highcharts-color-1 {
+        fill: #ff8f00 !important;
+        stroke: #ff8f00 !important;
+    }
+
+    // Highcharts text sizes
+    .highcharts-title {
+        font-size: 1.2rem !important;
+        font-weight: 600 !important;
+    }
+    .highcharts-axis-labels text {
+        font-size: 1rem !important;
+    }
+    .highcharts-data-label text {
+        font-size: 0.9rem !important;
+    }
+
+    // Form view adjustments
     @media (min-width: 1200px) {
-        .o_form_view .o_form_sheet_bg>.o_form_sheet {
+        .o_form_view .o_form_sheet_bg > .o_form_sheet {
             max-width: 95%;
         }
     }
-
     @media (min-width: 576px) {
         .o_form_view .oe_title {
             max-width: unset;
         }
     }
-
-    rect:hover {
-        fill: #fff !important;
+    .o_form_view .oe_title > h1,
+    .o_form_view .oe_title > .h1 {
+        min-height: unset !important;
     }
 
-    .highcharts-background {
-        fill: #fff;
-    }
-
-    .highcharts-credits {
-        display: none;
-    }
-
+    // Utility classes
     .bg-green {
         background-color: rgb(27, 240, 27);
     }
-
     .bg-yellow {
         color: #444444;
         background: #FFFFFF;
         font-size: 3rem !important;
-        text-shadow: 1px 0px 1px #CCCCCC, 0px 1px 1px #EEEEEE, 2px 1px 1px #CCCCCC, 1px 2px 1px #EEEEEE, 3px 2px 1px #CCCCCC, 2px 3px 1px #EEEEEE, 4px 3px 1px #CCCCCC, 3px 4px 1px #EEEEEE, 5px 4px 1px #CCCCCC, 4px 5px 1px #EEEEEE, 6px 5px 1px #CCCCCC, 5px 6px 1px #EEEEEE, 7px 6px 1px #CCCCCC;
+        text-shadow: 1px 0px 1px #CCCCCC, 0px 1px 1px #EEEEEE, 2px 1px 1px #CCCCCC, 
+                     1px 2px 1px #EEEEEE, 3px 2px 1px #CCCCCC, 2px 3px 1px #EEEEEE, 
+                     4px 3px 1px #CCCCCC, 3px 4px 1px #EEEEEE, 5px 4px 1px #CCCCCC, 
+                     4px 5px 1px #EEEEEE, 6px 5px 1px #CCCCCC, 5px 6px 1px #EEEEEE, 
+                     7px 6px 1px #CCCCCC;
+    }
+    .hr_title {
+        margin: 0 auto;
+        font-size: 2.2rem !important;
     }
 
-
-    .o_form_view .oe_title>h1,
-    .o_form_view .oe_title>.h1 {
-        min-height: unset !important;
-    }
-
+    // Dashboard container
     .dashboard-container {
+        display: flex;
+        gap: 1rem;
+        padding: 0.5rem;
+
+        // Cards section with larger text
         .cards {
             width: 30%;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
 
             .card {
                 min-width: 220px;
-                // border: 1px solid gray;
-                -webkit-box-shadow: 5px 8px 8px 0px rgba(34, 60, 80, 0.18);
-                -moz-box-shadow: 5px 8px 8px 0px rgba(34, 60, 80, 0.18);
-                box-shadow: 5px 8px 8px 0px rgba(34, 60, 80, 0.18);
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
                 border-radius: 10px;
                 overflow: hidden;
+                box-shadow: 5px 8px 8px 0px rgba(34, 60, 80, 0.18);
+                padding: 1rem;
 
                 p {
-                    margin-bottom: 0 !important;
+                    margin-bottom: 0;
                     color: black;
-                    padding: 0 4px 2px 4px;
-                    font-size: 15px;
+                    padding: 0 0.25rem 0.125rem;
+                    font-size: 1.1rem;  // Increased from 15px
+                    font-weight: 500;
                 }
 
                 h3 {
                     text-align: center;
                     width: 100%;
-                    padding: 2px 4px;
+                    padding: 0.125rem 0.25rem;
+                    font-size: 1.4rem;  // Increased size
+                    font-weight: 600;
                 }
             }
         }
 
+        // Graphs section with larger titles
         .graphs {
             width: 70%;
-            padding: 4px;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 25px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            padding: 0.25rem;
 
             .graph-container {
                 min-width: 400px;
                 flex: 1;
-                // border: 1px solid #bbb9b9;
                 overflow: hidden;
                 background-color: #fff;
-                border-radius: 16px;
-                -webkit-box-shadow: 5px 8px 44px -5px rgba(34, 60, 80, 0.18);
-                -moz-box-shadow: 5px 8px 44px -5px rgba(34, 60, 80, 0.18);
+                border-radius: 1rem;
                 box-shadow: 5px 8px 44px -5px rgba(34, 60, 80, 0.18);
 
                 .graph_text {
                     display: inline-block;
-                    // padding: 4px 16px;
-                    // border-radius: 50vw;
-                    font-size: 16px;
-                    font-weight: 500;
+                    font-size: 1.5em;  // Increased from 16px
+                    font-weight: 600;
                     color: white;
                     width: 100%;
-                    padding: 16px;
-                    border-radius: 10px 10px 0 0;
+                    padding: 1.2rem 1rem;  // Slightly taller
+                    border-radius: 0.625rem 0.625rem 0 0;
                 }
 
                 .graph {
                     height: 400px;
-                    // border: 1px solid #9b9b9b;
                     background-color: #fff;
+                    text-align: center;
                 }
             }
         }
     }
 
+    // HR section with larger titles
     .dashboard-hr {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 0.625rem;
+        margin: 1rem 0;
 
         .hr-card {
             min-width: 400px;
             flex: 1;
             overflow: hidden;
             background-color: #fff;
-            border-radius: 16px;
-            -webkit-box-shadow: 5px 8px 44px -5px rgba(34, 60, 80, 0.18);
-            -moz-box-shadow: 5px 8px 44px -5px rgba(34, 60, 80, 0.18);
+            border-radius: 1rem;
             box-shadow: 5px 8px 44px -5px rgba(34, 60, 80, 0.18);
 
             .graph_text {
                 display: inline-block;
-                // padding: 4px 16px;
-                // border-radius: 50vw;
-                font-size: 16px;
-                font-weight: 500;
+                font-size: 1.3rem;  // Increased from 16px
+                font-weight: 600;
                 color: white;
                 width: 100%;
-                padding: 16px;
-                border-radius: 10px 10px 0 0;
+                padding: 1.2rem 1rem;  // Slightly taller
+                border-radius: 0.625rem 0.625rem 0 0;
             }
 
             .hr-graph {
@@ -145,17 +173,50 @@
         }
     }
 
-    .highcharts-color-0 {
-        fill: #1e88e5 !important;
-        stroke: #1e88e5 !important;
+    // Responsive adjustments
+    @media (max-width: 992px) {
+        .dashboard-container {
+            flex-direction: column;
+
+            .cards,
+            .graphs {
+                width: 100%;
+            }
+
+            .cards {
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            }
+        }
+        
+        .hr_title {
+            font-size: 1.8rem !important;
+        }
     }
 
-    .highcharts-color-1 {
-        fill: #ff8f00 !important;
-        stroke: #ff8f00 !important;
+    @media (max-width: 576px) {
+        .graphs .graph-container,
+        .dashboard-hr .hr-card {
+            min-width: 100%;
+        }
+        
+        // Adjust text sizes for mobile
+        .dashboard-container .cards .card {
+            h3 {
+                font-size: 1.5rem;
+            }
+            p {
+                font-size: 1rem;
+            }
+        }
+        
+        .graphs .graph-container .graph_text,
+        .dashboard-hr .hr-card .graph_text {
+            font-size: 1.1rem;
+            padding: 1rem;
+        }
+        
+        .hr_title {
+            font-size: 1.5rem !important;
+        }
     }
-}
-
-.hr_title {
-    margin: 0 auto;
 }

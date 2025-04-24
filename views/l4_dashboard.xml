@@ -1,10 +1,10 @@
 <odoo>
-    <!-- Form View with widget -->
-    <record id="view_l2_dashboard_form" model="ir.ui.view">
-        <field name="name">l2.dashboard.form</field>
-        <field name="model">l2.dashboard</field>
+    <!-- Form View with Owl Widget -->
+    <record id="view_l4_dashboard_form" model="ir.ui.view">
+        <field name="name">l4.dashboard.form.no_title</field>
+        <field name="model">l4.dashboard</field>
         <field name="arch" type="xml">
-            <form string="L2 Dashboard" class="dashboard-form" create="0" edit="0" style="position: relative;">
+            <form string="L4 Dashboard" class="dashboard-form l4_dashboard_view" create="0" edit="0" style="position: relative;">
                 <style>
                     .o_control_panel {
                         border-bottom: 0;
@@ -24,12 +24,15 @@
                         
                         <!-- Left side (Dashboard Title) -->
                         <div class="col-md-6 col-sm-12 text-start">
-                            <h1 class="my-0" style="text-align: right;">L2 Dashboard</h1>
+                            <h1 class="my-0" style="text-align: right;">L4 Dashboard</h1>
                         </div>
 
                         <!-- Right side (Filters) -->
                         <div class="col-md-6 col-sm-12 d-flex flex-wrap justify-content-center justify-content-start" style="gap: 10px; text-align: center;">
+                            <field name="tag_type" placeholder="Select Region" class="mx-1 my-1"/>
                             <field name="year" placeholder="Select Year" class="mx-1 my-1"/>
+                            <field name="month" placeholder="Select Month" class="mx-1 my-1"/>
+                            <field name="quarter" placeholder="Select Quarter" class="mx-1 my-1"/>
                         </div>
 
                     </div>
@@ -42,14 +45,7 @@
                     </div>
                     
                     <!-- Dashboard content -->
-                    <field name="dashboard_data" readonly="1" nolabel='1' widget="l2_dashboard" class="d-block">
-                        <attribute name="options">
-                            {
-                                "custom_display": "true"
-                            }
-                        </attribute>
-                        <attribute name="style">display: block !important;</attribute>
-                    </field>
+                    <field name="dashboard_data" readonly="1" nolabel='1' widget="l4_dashboard"/>
                     
                     <!-- Hidden fields -->
                     <field name="company_id" groups="base.group_multi_company" invisible="1"/>
@@ -58,13 +54,13 @@
             </form>
         </field>
     </record>
-
-    <!-- Act Window -->
-    <record id="action_l2_dashboard" model="ir.actions.act_window">
-        <field name="name">L2 Dashboard</field>
-        <field name="res_model">l2.dashboard</field>
+    
+    <!-- Action Window -->
+    <record id="action_l4_dashboard" model="ir.actions.act_window">
+        <field name="name">L4 Dashboard</field>
+        <field name="res_model">l4.dashboard</field>
         <field name="view_mode">form</field>
-        <field name="view_id" ref="view_l2_dashboard_form"/>
+        <field name="view_id" ref="view_l4_dashboard_form"/>
         <field name="target">current</field>
     </record>
 </odoo>

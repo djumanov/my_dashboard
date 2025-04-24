@@ -1,160 +1,77 @@
 /** @odoo-module **/
-
 import { registry } from "@web/core/registry";
-import { Component, useState, onWillStart, onMounted, useRef } from "@odoo/owl";
-import { useService } from "@web/core/utils/hooks";
 import { loadJS } from "@web/core/assets";
+
+const { Component, useEffect, useState, useRef } = owl;
+
+var translation = require('web.translation');
+var _t = translation._t;
 
 export class L2Dashboard extends Component {
     setup() {
-        this.orm = useService("orm");
-        this.rpc = useService("rpc");
-        this.notification = useService("notification");
+        this.charts = {};  // ✅ Initialize charts
 
-        // Chart references
+        this.state = useState({
+            main_data: [],
+            data: {},
+            error: false,
+            errorMessage: "",
+        });
+
+        useEffect(() => {
+            const dashboardData = this.props.record?.data?.dashboard_data || '{}';
+
+            let parsedData = {};
+            try {
+                parsedData = JSON.parse(dashboardData);
+            } catch (e) {
+                console.warn("Invalid dashboard JSON", e);
+                this.state.error = true;
+                this.state.errorMessage = _t("Dashboard data is invalid.");
+                return;
+            }
+
+            this.state.main_data = parsedData;
+            this._initDashboard();
+            this._renderCharts();
+        }, () => [this.props.record?.data?.dashboard_data]);
+
+        // ✅ Initialize all refs
         this.totalSalesChart = useRef("totalSalesChart");
         this.localSalesChart = useRef("localSalesChart");
         this.exportSalesChart = useRef("exportSalesChart");
+
         this.totalRevenueChart = useRef("totalRevenueChart");
         this.localRevenueChart = useRef("localRevenueChart");
         this.exportRevenueChart = useRef("exportRevenueChart");
+
         this.totalExpensesChart = useRef("totalExpensesChart");
         this.localExpensesChart = useRef("localExpensesChart");
         this.exportExpensesChart = useRef("exportExpensesChart");
+
         this.totalCashFlowChart = useRef("totalCashFlowChart");
         this.localCashFlowChart = useRef("localCashFlowChart");
         this.exportCashFlowChart = useRef("exportCashFlowChart");
 
-        this.charts = {};
-
-        this.state = useState({
-            isLoading: true,
-            error: null,
-            data: {
-                sales: {
-                    total: { months: [], amounts: [], sum: 0 },
-                    local_sales: { months: [], amounts: [], sum: 0 },
-                    export_sales: { months: [], amounts: [], sum: 0 }
-                },
-                revenue: {
-                    total: { months: [], amounts: [], sum: 0 },
-                    local_revenue: { months: [], amounts: [], sum: 0 },
-                    export_revenue: { months: [], amounts: [], sum: 0 }
-                },
-                expenses: {
-                    total: { months: [], amounts: [], sum: 0 },
-                    local_expenses: { months: [], amounts: [], sum: 0 },
-                    export_expenses: { months: [], amounts: [], sum: 0 }
-                },
-                cash_flow: {
-                    total: { months: [], inflow: [], outflow: [], sum: 0 },
-                    local_cash_flow: { months: [], inflow: [], outflow: [], sum: 0 },
-                    export_cash_flow: { months: [], inflow: [], outflow: [], sum: 0 }
-                },
-                company: { currency: "$", name: "" },
-                last_update: null
-            },
-            selectedYear: new Date().getFullYear().toString()
-        });
-
-        onWillStart(async () => {
-            try {
-                await loadJS("https://cdn.jsdelivr.net/npm/apexcharts");
-                await this._initDashboard();
-            } catch (error) {
-                this._handleError(error);
-            }
-        });
-
-        onMounted(() => {
-            if (!this.state.isLoading && !this.state.error) {
-                setTimeout(() => this._renderCharts(), 100);
-            }
-        });
+        loadJS("https://cdn.jsdelivr.net/npm/apexcharts");
     }
 
-    async _initDashboard() {
-        this.state.isLoading = true;
-        this.state.error = null;
+    _initDashboard() {
+        const data = this.state.main_data;
+        this.state.data = {
+            sales: data.sales,
+            revenue: data.revenue,
+            expenses: data.expenses,
+            cash_flow: data.cash_flow,
+            company: data.company,
+        };
 
-        try {
-            let dashboardData = null;
-
-            if (this.props.value) {
-                try {
-                    dashboardData = JSON.parse(this.props.value);
-                } catch (e) {
-                    console.warn("Failed to parse dashboard data from record", e);
-                }
-            }
-
-            if (!dashboardData) {
-                const recordYear = this.props.record?.data?.year || new Date().getFullYear().toString();
-                const result = await this.orm.call('l2.dashboard', 'get_dashboard_data_json', [recordYear]);
-
-                try {
-                    dashboardData = JSON.parse(result);
-                } catch (e) {
-                    throw new Error("Invalid data received from server: " + e.message);
-                }
-            }
-
-            if (!dashboardData || typeof dashboardData !== 'object') {
-                throw new Error("Invalid dashboard data format");
-            }
-
-            this._validateAndSanitizeData(dashboardData);
-            this.state.data = dashboardData;
-            this.state.selectedYear = dashboardData.filters?.year?.toString() || new Date().getFullYear().toString();
-            this.state.isLoading = false;
-        } catch (error) {
-            this._handleError(error);
-        }
-    }
-
-    _validateAndSanitizeData(data) {
-        if (!data.sales) data.sales = {};
-        if (!data.sales.total) data.sales.total = { months: [], amounts: [], sum: 0 };
-        if (!data.sales.local_sales) data.sales.local_sales = { months: [], amounts: [], sum: 0 };
-        if (!data.sales.export_sales) data.sales.export_sales = { months: [], amounts: [], sum: 0 };
-
-        if (!data.revenue) data.revenue = {};
-        if (!data.revenue.total) data.revenue.total = { months: [], amounts: [], sum: 0 };
-        if (!data.revenue.local_revenue) data.revenue.local_revenue = { months: [], amounts: [], sum: 0 };
-        if (!data.revenue.export_revenue) data.revenue.export_revenue = { months: [], amounts: [], sum: 0 };
-
-        if (!data.expenses) data.expenses = {};
-        if (!data.expenses.total) data.expenses.total = { months: [], amounts: [], sum: 0 };
-        if (!data.expenses.local_expenses) data.expenses.local_expenses = { months: [], amounts: [], sum: 0 };
-        if (!data.expenses.export_expenses) data.expenses.export_expenses = { months: [], amounts: [], sum: 0 };
-
-        if (!data.cash_flow) data.cash_flow = {};
-        if (!data.cash_flow.total) data.cash_flow.total = { months: [], inflow: [], outflow: [], sum: 0 };
-        if (!data.cash_flow.local_cash_flow) data.cash_flow.local_cash_flow = { months: [], inflow: [], outflow: [], sum: 0 };
-        if (!data.cash_flow.export_cash_flow) data.cash_flow.export_cash_flow = { months: [], inflow: [], outflow: [], sum: 0 };
-
-        if (!data.company) data.company = { currency: "$", name: "" };
-
-        return data;
-    }
-
-    _handleError(error) {
-        console.error("Dashboard error:", error);
-        this.state.isLoading = false;
-        this.state.error = error.message || "Failed to load dashboard data";
-        this.notification.add(this.state.error, {
-            type: "danger",
-            title: "Dashboard Error",
-            sticky: true
-        });
+        this.state.error = !this.state.data;
+        this.state.errorMessage = this.state.error ? _t("Error loading dashboard data") : "";
     }
 
     _renderCharts() {
-        if (!window.ApexCharts) {
-            console.error("ApexCharts library not loaded");
-            this.state.error = "Chart library not loaded";
-            return;
-        }
+        if (this.state.error) return;
 
         this._destroyCharts();
 
@@ -163,31 +80,171 @@ export class L2Dashboard extends Component {
 
         const getChartOptions = (title, data, color) => ({
             series: [{ name: title, data: data?.amounts || [] }],
-            chart: { type: 'bar', height: 300, toolbar: { show: false }, fontFamily: 'Roboto' },
-            plotOptions: { bar: { borderRadius: 4, columnWidth: '70%' } },
-            dataLabels: { enabled: false },
-            stroke: { width: 2 },
-            grid: { row: { colors: ['#f3f3f3', 'transparent'], opacity: 0.2 } },
-            xaxis: { categories: data?.months || [], labels: { rotate: -45, style: { fontSize: '10px' } } },
-            yaxis: { title: { text: `Amount (${currency})` }, labels: { formatter: value => this.formatNumber(value) } },
-            fill: { colors: [color] },
-            tooltip: { y: { formatter: value => `${currency} ${this.formatNumber(value)}` } }
+            chart: {
+                type: 'bar',
+                height: 280,
+                toolbar: { show: false },
+                fontFamily: 'Inter, Roboto, sans-serif',
+                animations: {
+                    enabled: true,
+                    easing: 'easeinout',
+                    speed: 800,
+                },
+            },
+            plotOptions: {
+                bar: {
+                    borderRadius: 6,
+                    columnWidth: '60%',
+                    distributed: true,
+                }
+            },
+            dataLabels: {
+                enabled: false // ✅ No labels shown on top of bars
+            },
+            stroke: {
+                width: 1,
+                colors: ['#fff']
+            },
+            grid: {
+                borderColor: '#e0e0e0',
+                strokeDashArray: 4,
+            },
+            xaxis: {
+                categories: data?.months || [],
+                labels: {
+                    rotate: -45,
+                    style: {
+                        fontSize: '11px',
+                        fontWeight: 500,
+                        colors: '#333',
+                    }
+                },
+                axisTicks: { show: false },
+                axisBorder: { color: '#ccc' },
+            },
+            yaxis: {
+                title: {
+                    text: `Amount (${currency})`,
+                    style: { fontSize: '12px', color: '#666' }
+                },
+                labels: {
+                    formatter: (val) => this.formatNumber(val),
+                    style: { fontSize: '11px', color: '#666' }
+                },
+                tickAmount: 6,           // ✅ Consistent grid steps
+                forceNiceScale: true     // ✅ Smooth axis scale
+            },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shade: 'light',
+                    type: 'vertical',
+                    shadeIntensity: 0.3,
+                    gradientToColors: [color],
+                    inverseColors: false,
+                    opacityFrom: 0.6,
+                    opacityTo: 1,
+                    stops: [0, 100]
+                }
+            },
+            tooltip: {
+                theme: 'light',
+                y: {
+                    formatter: (val) => `${currency} ${this.formatNumber(val)}`
+                }
+            },
+            legend: {
+                show: false
+            }
         });
+        
+        
 
-        const getLineChartOptions = (title, data, color1, color2) => ({
+        const getLineChartOptions = (title, data) => ({
             series: [
-                { name: "Inflow", data: data?.inflow || [] },
-                { name: "Outflow", data: data?.outflow || [] }
+              {
+                name: 'Inflow',
+                data: (data?.inflow || []).map(v => v ?? 0),
+                color: '#28a745'  // Green line
+              },
+              {
+                name: 'Outflow',
+                data: (data?.outflow || []).map(v => v ?? 0),
+                color: '#dc3545'  // Red line
+              }
             ],
-            chart: { type: 'line', height: 300, toolbar: { show: false }, fontFamily: 'Roboto' },
-            stroke: { width: 3, curve: 'smooth' },
-            markers: { size: 4 },
-            xaxis: { categories: data?.months || [], labels: { rotate: -45, style: { fontSize: '10px' } } },
-            yaxis: { title: { text: `Amount (${currency})` }, labels: { formatter: val => this.formatNumber(val) } },
-            colors: [color1, color2],
-            tooltip: { y: { formatter: val => `${currency} ${this.formatNumber(val)}` } },
-            legend: { position: 'top', horizontalAlign: 'center' }
-        });
+            chart: {
+              type: 'line',
+              height: 300,
+              toolbar: { show: true },
+              animations: {
+                enabled: true,
+                easing: 'easeinout',
+                speed: 600
+              },
+              zoom: { enabled: true }
+            },
+            stroke: {
+              curve: 'smooth',     // ✅ same curved line like Chart.js
+              width: 2,            // ✅ visible line
+              colors: undefined    // ✅ let series.color handle this
+            },
+            markers: {
+              size: 4,
+              strokeWidth: 2,
+              strokeColors: '#fff', // optional white border
+              colors: undefined     // ✅ use same color as line
+            },
+            fill: {
+              type: 'solid',        // ✅ no area fill (just line)
+              opacity: 0            // ✅ no fill
+            },
+            colors: ['#28a745', '#dc3545'], // just for safety, used if series.color is missing
+            xaxis: {
+              categories: data?.months || [],
+              labels: {
+                rotate: -45,
+                style: {
+                  fontSize: '12px',
+                  colors: '#333'
+                }
+              },
+              axisTicks: { show: false },
+              axisBorder: { color: '#ccc' }
+            },
+            yaxis: {
+              min: 0,
+              forceNiceScale: true,
+              labels: {
+                formatter: val => val.toLocaleString(),
+                style: {
+                  fontSize: '12px',
+                  colors: '#333'
+                }
+              },
+              title: {
+                text: `Amount (Nu.)`,
+                style: { fontSize: '1px', color: '#888' }
+              }
+            },
+            tooltip: {
+              shared: true,
+              y: {
+                formatter: val => `Nu. ${val.toLocaleString()}`
+              }
+            },
+            legend: {
+              position: 'top',
+              fontSize: '13px'
+            },
+            grid: {
+              borderColor: '#e0e0e0',
+              strokeDashArray: 4
+            }
+          });
+          
+        
+        
 
         this._createChart('totalSales', this.totalSalesChart.el, getChartOptions('Total Sales', sales?.total, '#4361ee'));
         this._createChart('localSales', this.localSalesChart.el, getChartOptions('Local Sales', sales?.local_sales, '#3a86ff'));
@@ -225,8 +282,8 @@ export class L2Dashboard extends Component {
         this.charts = {};
     }
 
-    async updateDashboard() {
-        await this._initDashboard();
+    updateDashboard() {
+        this._initDashboard();
         if (!this.state.error) this._renderCharts();
     }
 
@@ -264,20 +321,15 @@ export class L2Dashboard extends Component {
 
 L2Dashboard.template = 'custom.l2_dashboard';
 L2Dashboard.props = {
-    // Original props
     record: { type: Object, optional: true },
     value: { type: String, optional: true },
     readonly: { type: Boolean, optional: true },
     name: { type: String, optional: true },
-    
-    // Additional required field props from standard Odoo fields
     update: { type: Function, optional: true },
     decorations: { type: Object, optional: true },
     id: { type: String, optional: true },
     type: { type: String, optional: true },
     setDirty: { type: Function, optional: true },
-    
-    // Additional standard Odoo field props that might be passed
     fieldDependencies: { type: Array, optional: true },
     required: { type: Boolean, optional: true },
     className: { type: String, optional: true },

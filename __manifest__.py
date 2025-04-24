@@ -23,6 +23,7 @@
         'security/ir.model.access.csv',
         'views/dashboard.xml',
         'views/l2_dashboard.xml',
+        'views/l4_dashboard.xml',
         'views/sale_target.xml',
         'views/menu.xml',
     ],
