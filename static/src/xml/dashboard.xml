@@ -308,13 +308,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <t t-set="total" t-value="{
-                                po_value: 0, invoiced: 0, collected: 0, pending_collection: 0,
-                                outstanding: 0, vendor_invoice: 0, payment_made: 0,
-                                payment_to_be_made: 0, payroll_cost: 0, total_outgoing: 0, total_margin: 0
-                            }" />
-
-                            <t t-if="!this.state.main_data.projects || this.state.main_data.projects.length === 0">
+                            <t t-if="!this.state.main_data.projects">
                                 <tr>
                                     <td colspan="16" class="text-center py-4">
                                         <div class="text-muted">
@@ -379,19 +373,6 @@
                                                                                                     (row.margin_percent gte 20 ? 'text-success fw-bold' : '')">
                                         <t t-esc="row.margin_percent" />
                                     </td>
-                                    
-                                    <!-- Update total values -->
-                                    <t t-set="total.po_value" t-value="total.po_value + row.po_value" />
-                                    <t t-set="total.invoiced" t-value="total.invoiced + row.invoiced" />
-                                    <t t-set="total.collected" t-value="total.collected + row.collected" />
-                                    <t t-set="total.pending_collection" t-value="total.pending_collection + row.pending_collection" />
-                                    <t t-set="total.outstanding" t-value="total.outstanding + (row.outstanding_aging || 0)" />
-                                    <t t-set="total.vendor_invoice" t-value="total.vendor_invoice + row.vendor_invoice" />
-                                    <t t-set="total.payment_made" t-value="total.payment_made + row.payment_made" />
-                                    <t t-set="total.payment_to_be_made" t-value="total.payment_to_be_made + row.payment_to_be_made" />
-                                    <t t-set="total.payroll_cost" t-value="total.payroll_cost + row.payroll_cost" />
-                                    <t t-set="total.total_outgoing" t-value="total.total_outgoing + row.total_outgoing" />
-                                    <t t-set="total.total_margin" t-value="total.total_margin + row.total_margin" />
                                 </tr>
                             </t>
 
@@ -400,39 +381,41 @@
                                 <td class="border-end" style="position: sticky; left: 0; z-index: 5; background-color: #f8f9fa;">
                                     <span class="text-uppercase">Totals</span>
                                 </td>
-                                <td class="border-end" colspan="3"></td>
-                                <td class="border-end text-end">
-                                    <t t-esc="total.po_value" />
+                                <td class="border-end" colspan="3">
+                                    <t t-esc="this.state.main_data.summary.project_count" />
                                 </td>
                                 <td class="border-end text-end">
-                                    <t t-esc="total.invoiced" />
+                                    <t t-esc="this.state.main_data.summary.total_po_value" />
                                 </td>
                                 <td class="border-end text-end">
-                                    <t t-esc="total.collected" />
+                                    <t t-esc="this.state.main_data.summary.total_invoiced" />
                                 </td>
-                                <td class="border-end text-end" t-att-class="total.pending_collection > 0 ? 'text-danger' : ''">
-                                    <t t-esc="total.pending_collection" />
+                                <td class="border-end text-end">
+                                    <t t-esc="this.state.main_data.summary.total_collected" />
+                                </td>
+                                <td class="border-end text-end">
+                                    <t t-esc="this.state.main_data.summary.total_pending_collection" />
                                 </td>
                                 <td class="border-end text-end">
                                     <t t-esc="0" />
                                 </td>
                                 <td class="border-end text-end">
-                                    <t t-esc="total.vendor_invoice" />
+                                    <t t-esc="this.state.main_data.summary.total_vendor_invoice" />
                                 </td>
                                 <td class="border-end text-end">
-                                    <t t-esc="total.payment_made" />
+                                    <t t-esc="this.state.main_data.summary.total_payment_made" />
                                 </td>
                                 <td class="border-end text-end">
-                                    <t t-esc="total.payment_to_be_made" />
+                                    <t t-esc="this.state.main_data.summary.total_payment_to_be_made" />
                                 </td>
                                 <td class="border-end text-end text-danger">
-                                    <t t-esc="total.payroll_cost" />
+                                    <t t-esc="this.state.main_data.summary.total_payroll_cost" />
                                 </td>
                                 <td class="border-end text-end">
-                                    <t t-esc="total.total_outgoing" />
+                                    <t t-esc="this.state.main_data.summary.total_margin" />
                                 </td>
-                                <td class="border-end text-end" t-att-class="total.total_margin lt 0 ? 'text-danger' : 'text-success'">
-                                    <t t-esc="total.total_margin" />
+                                <td class="border-end text-end">
+                                    <t t-esc="this.state.main_data.summary.total_margin" />
                                 </td>
                                 <td class="text-end">
                                     <t t-esc="0" />

@@ -536,6 +536,8 @@ class L4Dashboard(models.Model):
             month_name = dict(self._fields['month'].selection).get(self.month)
         
         tag_type = self.tag_type or 'all'
+
+        project_rows = self._get_project_rows(start_date_str, end_date_str, tag_type)
         
         return {
             'filters': {
@@ -551,8 +553,8 @@ class L4Dashboard(models.Model):
                 'currency': self.currency_id.symbol,
                 'country': self.company_id.country_id.name or _('Not Set')
             },
-            'projects': self._get_project_rows(start_date_str, end_date_str, tag_type),
-            'summary': self._get_dashboard_summary(start_date_str, end_date_str, tag_type),
+            'projects': project_rows,
+            'summary': self._get_dashboard_summary(project_rows),
         }
         
     def _get_filter_date_range(self, year):
@@ -784,7 +786,7 @@ class L4Dashboard(models.Model):
             data["outstanding_aging"] = (today - sale_order.date_order.date()).days
         else:
             data["outstanding_aging"] = 0
-            
+
         # Calculate vendor bills and payments
         vendor_bills = self._get_project_vendor_bills(project, start_date, end_date)
         data["vendor_invoice"] = sum(vendor_bills.mapped('amount_untaxed'))
@@ -974,13 +976,11 @@ class L4Dashboard(models.Model):
                 
         return data
         
-    def _get_dashboard_summary(self, start_date, end_date, tag_type):
+    def _get_dashboard_summary(self, project_rows):
         """Get summary data for dashboard
         
         Args:
-            start_date: Start date string
-            end_date: End date string
-            tag_type: Region filter
+            project_rows: a list of project data
             
         Returns:
             dict: Summary data
@@ -990,26 +990,25 @@ class L4Dashboard(models.Model):
             'total_po_value': 0.0,
             'total_invoiced': 0.0,
             'total_collected': 0.0,
+            'total_pending_collection': 0.0,
             'total_vendor_invoice': 0.0,
             'total_payment_made': 0.0,
+            'total_payment_to_be_made': 0.0,
             'total_payroll_cost': 0.0,
             'total_margin': 0.0,
             'avg_margin_percent': 0.0,
             'project_count': 0,
         }
-        
-        # Reuse project rows data
-        project_rows = self._get_project_rows(start_date, end_date, tag_type)
-        if not project_rows:
-            return summary
             
         # Sum values from all projects
         for row in project_rows:
             summary['total_po_value'] += row['po_value']
             summary['total_invoiced'] += row['invoiced']
             summary['total_collected'] += row['collected']
+            summary['total_pending_collection'] += row['pending_collection']
             summary['total_vendor_invoice'] += row['vendor_invoice']
             summary['total_payment_made'] += row['payment_made']
+            summary['total_payment_to_be_made'] += row['payment_to_be_made']
             summary['total_payroll_cost'] += row['payroll_cost']
             summary['total_margin'] += row['total_margin']
             
