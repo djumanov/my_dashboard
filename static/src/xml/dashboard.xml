@@ -289,22 +289,71 @@
                     <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
                         <thead>
                             <tr class="bg-light">
-                                <th class="border-end fw-bold" style="position: sticky; left: 0; z-index: 10; background-color: #f8f9fa;">Region</th>
-                                <th class="border-end fw-bold text-nowrap">Project</th>
-                                <th class="border-end fw-bold text-nowrap">Customer</th>
-                                <th class="border-end fw-bold text-nowrap">Date</th>
-                                <th class="border-end fw-bold text-nowrap text-end">PO Value</th>
-                                <th class="border-end fw-bold text-nowrap text-end">Invoiced</th>
-                                <th class="border-end fw-bold text-nowrap text-end">Collected</th>
-                                <th class="border-end fw-bold text-nowrap text-end text-danger">Pending Collection</th>
-                                <th class="border-end fw-bold text-nowrap text-end">Outstanding Aging</th>
-                                <th class="border-end fw-bold text-nowrap text-end">Vendor Invoice</th>
-                                <th class="border-end fw-bold text-nowrap text-end">Payment Made</th>
-                                <th class="border-end fw-bold text-nowrap text-end">Payment Pending</th>
-                                <th class="border-end fw-bold text-nowrap text-end text-danger">Payroll Cost</th>
-                                <th class="border-end fw-bold text-nowrap text-end">Total Outgoing</th>
-                                <th class="border-end fw-bold text-nowrap text-end">Total Margin</th>
-                                <th class="fw-bold text-nowrap text-end">Margin %</th>
+                                <th class="border-end fw-bold cursor-pointer" 
+                                    style="position: sticky; left: 0; z-index: 10; background-color: #f8f9fa;"
+                                    t-on-click="() => this.handleSort('region')">
+                                    Region <span t-esc="this.getSortIndicator('region')" />
+                                </th>
+                                <th class="border-end fw-bold text-nowrap cursor-pointer"
+                                    t-on-click="() => this.handleSort('project')">
+                                    Project <span t-esc="this.getSortIndicator('project')" />
+                                </th>
+                                <th class="border-end fw-bold text-nowrap cursor-pointer"
+                                    t-on-click="() => this.handleSort('customer')">
+                                    Customer <span t-esc="this.getSortIndicator('customer')" />
+                                </th>
+                                <th class="border-end fw-bold text-nowrap cursor-pointer"
+                                    t-on-click="() => this.handleSort('date')">
+                                    Date <span t-esc="this.getSortIndicator('date')" />
+                                </th>
+                                <th class="border-end fw-bold text-nowrap text-end cursor-pointer"
+                                    t-on-click="() => this.handleSort('po_value')">
+                                    PO Value <span t-esc="this.getSortIndicator('po_value')" />
+                                </th>
+                                <th class="border-end fw-bold text-nowrap text-end cursor-pointer"
+                                    t-on-click="() => this.handleSort('invoiced')">
+                                    Invoiced <span t-esc="this.getSortIndicator('invoiced')" />
+                                </th>
+                                <th class="border-end fw-bold text-nowrap text-end cursor-pointer"
+                                    t-on-click="() => this.handleSort('collected')">
+                                    Collected <span t-esc="this.getSortIndicator('collected')" />
+                                </th>
+                                <th class="border-end fw-bold text-nowrap text-end text-danger cursor-pointer"
+                                    t-on-click="() => this.handleSort('pending_collection')">
+                                    Pending Collection <span t-esc="this.getSortIndicator('pending_collection')" />
+                                </th>
+                                <th class="border-end fw-bold text-nowrap text-end cursor-pointer"
+                                    t-on-click="() => this.handleSort('outstanding_aging')">
+                                    Outstanding Aging <span t-esc="this.getSortIndicator('outstanding_aging')" />
+                                </th>
+                                <th class="border-end fw-bold text-nowrap text-end cursor-pointer"
+                                    t-on-click="() => this.handleSort('vendor_invoice')">
+                                    Vendor Invoice <span t-esc="this.getSortIndicator('vendor_invoice')" />
+                                </th>
+                                <th class="border-end fw-bold text-nowrap text-end cursor-pointer"
+                                    t-on-click="() => this.handleSort('payment_made')">
+                                    Payment Made <span t-esc="this.getSortIndicator('payment_made')" />
+                                </th>
+                                <th class="border-end fw-bold text-nowrap text-end cursor-pointer"
+                                    t-on-click="() => this.handleSort('payment_to_be_made')">
+                                    Payment Pending <span t-esc="this.getSortIndicator('payment_to_be_made')" />
+                                </th>
+                                <th class="border-end fw-bold text-nowrap text-end text-danger cursor-pointer"
+                                    t-on-click="() => this.handleSort('payroll_cost')">
+                                    Payroll Cost <span t-esc="this.getSortIndicator('payroll_cost')" />
+                                </th>
+                                <th class="border-end fw-bold text-nowrap text-end cursor-pointer"
+                                    t-on-click="() => this.handleSort('total_outgoing')">
+                                    Total Outgoing <span t-esc="this.getSortIndicator('total_outgoing')" />
+                                </th>
+                                <th class="border-end fw-bold text-nowrap text-end cursor-pointer"
+                                    t-on-click="() => this.handleSort('total_margin')">
+                                    Total Margin <span t-esc="this.getSortIndicator('total_margin')" />
+                                </th>
+                                <th class="fw-bold text-nowrap text-end cursor-pointer"
+                                    t-on-click="() => this.handleSort('margin_percent')">
+                                    Margin % <span t-esc="this.getSortIndicator('margin_percent')" />
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -345,7 +394,7 @@
                                     <td class="border-end text-end">
                                         <t t-esc="row.collected" />
                                     </td>
-                                    <td class="border-end text-end fw-bold" t-att-class="row.pending_collection > 0 ? 'text-danger' : ''">
+                                    <td class="border-end text-end fw-bold" t-att-class="row._raw_pending_collection > 0 ? 'text-danger' : ''">
                                         <t t-esc="row.pending_collection" />
                                     </td>
                                     <td class="border-end text-end">
@@ -366,11 +415,11 @@
                                     <td class="border-end text-end">
                                         <t t-esc="row.total_outgoing" />
                                     </td>
-                                    <td class="border-end text-end" t-att-class="row.total_margin lt 0 ? 'text-danger' : 'text-success'">
+                                    <td class="border-end text-end" t-att-class="row._raw_total_margin lt 0 ? 'text-danger' : 'text-success'">
                                         <t t-esc="row.total_margin" />
                                     </td>
-                                    <td class="text-end" t-att-class="row.margin_percent lt 0 ? 'text-danger' : 
-                                                                                                    (row.margin_percent gte 20 ? 'text-success fw-bold' : '')">
+                                    <td class="text-end" t-att-class="row._raw_margin_percent lt 0 ? 'text-danger' : 
+                                                                                                    (row._raw_margin_percent gte 20 ? 'text-success fw-bold' : '')">
                                         <t t-esc="row.margin_percent" />
                                     </td>
                                 </tr>
