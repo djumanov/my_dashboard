@@ -28,8 +28,14 @@ export class Dashboard extends Component {
                 }
             },
             sort: {
-                field: 'project', // Default sort field
-                direction: 'asc'  // 'asc' or 'desc'
+                primary: {
+                    field: 'region', // Changed default sort field to region
+                    direction: 'asc'  // 'asc' or 'desc'
+                },
+                secondary: {
+                    field: 'date', // Added secondary sort field for date
+                    direction: 'asc'
+                }
             },
         });
         
@@ -50,43 +56,76 @@ export class Dashboard extends Component {
             });
         };
         
-        // Sort projects based on current sort field and direction
+        // Sort projects based on current sort fields and directions
         this.sortProjects = (projects) => {
             if (!projects || !projects.length) return [];
             
-            const field = this.state.sort.field;
-            const direction = this.state.sort.direction;
+            const primaryField = this.state.sort.primary.field;
+            const primaryDirection = this.state.sort.primary.direction;
+            const secondaryField = this.state.sort.secondary.field;
+            const secondaryDirection = this.state.sort.secondary.direction;
             
             return [...projects].sort((a, b) => {
-                // Access raw values for numeric fields
-                const valueA = a[`_raw_${field}`] !== undefined ? a[`_raw_${field}`] : a[field];
-                const valueB = b[`_raw_${field}`] !== undefined ? b[`_raw_${field}`] : b[field];
+                // Access raw values for primary field
+                const valueA_primary = a[`_raw_${primaryField}`] !== undefined ? a[`_raw_${primaryField}`] : a[primaryField];
+                const valueB_primary = b[`_raw_${primaryField}`] !== undefined ? b[`_raw_${primaryField}`] : b[primaryField];
                 
-                // Handle null/undefined values
-                if (valueA === undefined || valueA === null) return direction === 'asc' ? -1 : 1;
-                if (valueB === undefined || valueB === null) return direction === 'asc' ? 1 : -1;
+                // Handle null/undefined values for primary field
+                if (valueA_primary === undefined || valueA_primary === null) return primaryDirection === 'asc' ? -1 : 1;
+                if (valueB_primary === undefined || valueB_primary === null) return primaryDirection === 'asc' ? 1 : -1;
                 
-                // Compare based on data type
-                if (typeof valueA === 'number' && typeof valueB === 'number') {
-                    return direction === 'asc' ? valueA - valueB : valueB - valueA;
+                // Compare based on data type for primary field
+                let primaryCompare = 0;
+                if (typeof valueA_primary === 'number' && typeof valueB_primary === 'number') {
+                    primaryCompare = primaryDirection === 'asc' ? valueA_primary - valueB_primary : valueB_primary - valueA_primary;
                 } else {
                     // Convert to string for string comparison
-                    const strA = String(valueA).toLowerCase();
-                    const strB = String(valueB).toLowerCase();
-                    return direction === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA);
+                    const strA = String(valueA_primary).toLowerCase();
+                    const strB = String(valueB_primary).toLowerCase();
+                    primaryCompare = primaryDirection === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA);
                 }
+                
+                // If primary fields are equal, use secondary field
+                if (primaryCompare === 0) {
+                    // Access raw values for secondary field
+                    const valueA_secondary = a[`_raw_${secondaryField}`] !== undefined ? a[`_raw_${secondaryField}`] : a[secondaryField];
+                    const valueB_secondary = b[`_raw_${secondaryField}`] !== undefined ? b[`_raw_${secondaryField}`] : b[secondaryField];
+                    
+                    // Handle null/undefined values for secondary field
+                    if (valueA_secondary === undefined || valueA_secondary === null) return secondaryDirection === 'asc' ? -1 : 1;
+                    if (valueB_secondary === undefined || valueB_secondary === null) return secondaryDirection === 'asc' ? 1 : -1;
+                    
+                    // Compare based on data type for secondary field
+                    if (typeof valueA_secondary === 'number' && typeof valueB_secondary === 'number') {
+                        return secondaryDirection === 'asc' ? valueA_secondary - valueB_secondary : valueB_secondary - valueA_secondary;
+                    } else {
+                        // Convert to string for string comparison
+                        const strA = String(valueA_secondary).toLowerCase();
+                        const strB = String(valueB_secondary).toLowerCase();
+                        return secondaryDirection === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA);
+                    }
+                }
+                
+                return primaryCompare;
             });
         };
         
         // Handler for column header clicks
         this.handleSort = (field) => {
-            if (this.state.sort.field === field) {
+            if (this.state.sort.primary.field === field) {
                 // Toggle direction if already sorting by this field
-                this.state.sort.direction = this.state.sort.direction === 'asc' ? 'desc' : 'asc';
+                this.state.sort.primary.direction = this.state.sort.primary.direction === 'asc' ? 'desc' : 'asc';
+            } else if (this.state.sort.secondary.field === field) {
+                // Toggle secondary direction if clicking on secondary field
+                this.state.sort.secondary.direction = this.state.sort.secondary.direction === 'asc' ? 'desc' : 'asc';
             } else {
-                // Switch to new field with default ascending direction
-                this.state.sort.field = field;
-                this.state.sort.direction = 'asc';
+                // Make the current primary sort the secondary sort
+                this.state.sort.secondary.field = this.state.sort.primary.field;
+                this.state.sort.secondary.direction = this.state.sort.primary.direction;
+                
+                // Set new primary sort
+                this.state.sort.primary.field = field;
+                this.state.sort.primary.direction = 'asc';
             }
             
             // Apply sorting to the projects array
@@ -97,8 +136,12 @@ export class Dashboard extends Component {
         
         // Get sort indicator (arrow) for column header
         this.getSortIndicator = (field) => {
-            if (this.state.sort.field !== field) return '';
-            return this.state.sort.direction === 'asc' ? '▲' : '▼';
+            if (this.state.sort.primary.field === field) {
+                return this.state.sort.primary.direction === 'asc' ? '▲' : '▼';
+            } else if (this.state.sort.secondary.field === field) {
+                return this.state.sort.secondary.direction === 'asc' ? '▲ (2)' : '▼ (2)';
+            }
+            return '';
         };
         
         useEffect(
