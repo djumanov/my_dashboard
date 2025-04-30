@@ -230,12 +230,15 @@ class L1Dashboard(models.Model):
 
         local_sales_amount = export_sales_amount = 0.0
 
-        for local_project in local_projects:
-            for sales_order in sales_orders:
+        
+        for sales_order in sales_orders:
+            for local_project in local_projects:
                 if local_project in sales_order.project_ids:
                     local_sales_amount += sales_order.amount_untaxed
+                    break
                 else:
                     order_lines = sales_order.order_line
+                    found = False
                     for line in order_lines:
                         if line.analytic_distribution:
                             try:
@@ -246,17 +249,25 @@ class L1Dashboard(models.Model):
                                     account_id = int(account_id)
                                     
                                     if account_id in local_analytic_account_ids:
-                                        local_sales_amount += sales_order.amount_untaxed
+                                        local_sales_amount += line.price_subtotal
+                                        found = True
                                         break
                             except Exception as e:
                                 _logger.error(f"Error processing analytic distribution for order {sales_order.id}: {e}")
+                        else:
+                            break
+                    
+                    if found:
+                        break
 
-        for export_project in export_projects:
-            for sales_order in sales_orders:
+        for sales_order in sales_orders:
+            for export_project in export_projects:
                 if export_project in sales_order.project_ids:
                     export_sales_amount += sales_order.amount_untaxed
+                    break
                 else:
                     order_lines = sales_order.order_line
+                    found = False
                     for line in order_lines:
                         if line.analytic_distribution:
                             try:
@@ -267,10 +278,16 @@ class L1Dashboard(models.Model):
                                     account_id = int(account_id)
                                     
                                     if account_id in export_analytic_account_ids:
-                                        export_sales_amount += sales_order.amount_untaxed
+                                        export_sales_amount += line.price_subtotal
+                                        found = True
                                         break
                             except Exception as e:
                                 _logger.error(f"Error processing analytic distribution for order {sales_order.id}: {e}")
+                        else:
+                            break
+                    
+                    if found:
+                        break
 
         return {
             'sales_order_count': sales_order_count,
