@@ -157,95 +157,99 @@ export class L2Dashboard extends Component {
                 show: false
             }
         });
-        
-        
 
-        const getLineChartOptions = (title, data) => ({
-            series: [
-              {
-                name: 'Inflow',
-                data: (data?.inflow || []).map(v => v ?? 0),
-                color: '#28a745'  // Green line
-              },
-              {
-                name: 'Outflow',
-                data: (data?.outflow || []).map(v => v ?? 0),
-                color: '#dc3545'  // Red line
-              }
-            ],
-            chart: {
-              type: 'line',
-              height: 300,
-              toolbar: { show: true },
-              animations: {
-                enabled: true,
-                easing: 'easeinout',
-                speed: 600
-              },
-              zoom: { enabled: true }
-            },
-            stroke: {
-              curve: 'smooth',     // ✅ same curved line like Chart.js
-              width: 2,            // ✅ visible line
-              colors: undefined    // ✅ let series.color handle this
-            },
-            markers: {
-              size: 4,
-              strokeWidth: 2,
-              strokeColors: '#fff', // optional white border
-              colors: undefined     // ✅ use same color as line
-            },
-            fill: {
-              type: 'solid',        // ✅ no area fill (just line)
-              opacity: 0            // ✅ no fill
-            },
-            colors: ['#28a745', '#dc3545'], // just for safety, used if series.color is missing
-            xaxis: {
-              categories: data?.months || [],
-              labels: {
-                rotate: -45,
-                style: {
-                  fontSize: '12px',
-                  colors: '#333'
-                }
-              },
-              axisTicks: { show: false },
-              axisBorder: { color: '#ccc' }
-            },
-            yaxis: {
-              min: 0,
-              forceNiceScale: true,
-              labels: {
-                formatter: val => val.toLocaleString(),
-                style: {
-                  fontSize: '12px',
-                  colors: '#333'
-                }
-              },
-              title: {
-                text: `Amount (Nu.)`,
-                style: { fontSize: '1px', color: '#888' }
-              }
-            },
-            tooltip: {
-              shared: true,
-              y: {
-                formatter: val => `Nu. ${val.toLocaleString()}`
-              }
-            },
-            legend: {
-              position: 'top',
-              fontSize: '13px'
-            },
-            grid: {
-              borderColor: '#e0e0e0',
-              strokeDashArray: 4
-            }
-          });
+        const getLineChartOptions = (title, data) => {
+            const months = Array.isArray(data?.months) ? data.months.map(m => m ?? '-') : [];
+            const inflow = Array.isArray(data?.inflow) ? data.inflow.map(v => v ?? 0) : [];
+            const outflow = Array.isArray(data?.outflow) ? data.outflow.map(v => v ?? 0) : [];
           
+            const length = Math.min(months.length, inflow.length, outflow.length);
+          
+            const safeMonths = months.slice(0, length);
+            const safeInflow = inflow.slice(0, length);
+            const safeOutflow = outflow.slice(0, length);
+          
+            return {
+              series: [
+                {
+                  name: 'Inflow',
+                  data: safeInflow
+                },
+                {
+                  name: 'Outflow',
+                  data: safeOutflow
+                }
+              ],
+              chart: {
+                type: 'line',
+                height: 300,
+                toolbar: { show: true },
+                animations: {
+                  enabled: true,
+                  easing: 'easeinout',
+                  speed: 600
+                },
+                zoom: { enabled: true }
+              },
+              stroke: {
+                curve: 'smooth',
+                width: 2  ,
+                colors:['#28a745', '#dc3545']
+              },
+              markers: {
+                size: 4,
+                strokeWidth: 2,
+                strokeColors: '#fff'
+              },
+              fill: {
+                type: 'solid',
+                opacity: 1
+              },
+              colors: ['#28a745', '#dc3545'],  // ✅ global colors are enough
+              xaxis: {
+                categories: safeMonths,
+                labels: {
+                  rotate: -45,
+                  style: {
+                    fontSize: '12px',
+                    colors: '#333'
+                  }
+                },
+                axisTicks: { show: false },
+                axisBorder: { color: '#ccc' }
+              },
+              yaxis: {
+                min: 0,
+                forceNiceScale: true,
+                labels: {
+                  formatter: val => val.toLocaleString(),
+                  style: {
+                    fontSize: '12px',
+                    colors: '#333'
+                  }
+                },
+                title: {
+                  text: `Amount (Nu.)`,
+                  style: { fontSize: '1px', color: '#888' }
+                }
+              },
+              tooltip: {
+                shared: true,
+                y: {
+                  formatter: val => `Nu. ${val?.toLocaleString?.() ?? 0}`
+                }
+              },
+              legend: {
+                position: 'top',
+                fontSize: '13px'
+              },
+              grid: {
+                borderColor: '#e0e0e0',
+                strokeDashArray: 4
+              }
+            };
+        };
         
-        
-
         this._createChart('totalSales', this.totalSalesChart.el, getChartOptions('Total Sales', sales?.total, '#4361ee'));
         this._createChart('localSales', this.localSalesChart.el, getChartOptions('Local Sales', sales?.local_sales, '#3a86ff'));
         this._createChart('exportSales', this.exportSalesChart.el, getChartOptions('Export Sales', sales?.export_sales, '#38b000'));

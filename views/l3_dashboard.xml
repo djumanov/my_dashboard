@@ -1,0 +1,38 @@
+<odoo>
+    <!-- Full-Width View Without <sheet> -->
+    <record id="view_l3_dashboard_form" model="ir.ui.view">
+        <field name="name">l3.dashboard.form.OWL</field>
+        <field name="model">l3.dashboard</field>
+        <field name="arch" type="xml">
+        <form string="L4 Dashboard" class="dashboard-form" create="0" edit="0" style="position: relative;">
+            <style>
+                .o_control_panel {
+                    border-bottom: 0;
+                    padding-top: 0;
+                    padding-right: 0;
+                    padding-bottom: 0;
+                    padding-left: 0;
+                    visibility: hidden;
+                }
+                .o_form_nosheet {
+                    padding-top: 0;
+                }
+            </style>
+            <div class="o_form_view_container" style="width: 90%; margin: auto;">
+                <field name="project_id" invisible="1"/>
+                <field name="dashboard_data" widget="l3_dashboard" nolabel="1" readonly="1"/>
+            </div>
+        </form>
+        </field>
+    </record>
+
+    <!-- Action opens in fullscreen target -->
+    <record id="action_l3_dashboard" model="ir.actions.act_window">
+        <field name="name">L3 Dashboard</field>
+        <field name="res_model">l3.dashboard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_l3_dashboard_form"/>
+        <field name="context">{'default_project_id': active_project_id}</field>
+        <field name="target">current</field>
+    </record>
+</odoo>

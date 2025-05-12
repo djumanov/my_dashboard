@@ -1,6 +1,6 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
-
+import { useService } from "@web/core/utils/hooks";
 var translation = require('web.translation');
 var _t = translation._t;
 const { Component, useEffect, useState } = owl;
@@ -9,6 +9,8 @@ export class Dashboard extends Component {
     static template = 'custom.l4_dashboard'
     setup() {
         super.setup();
+
+        this.actionService = useService("action");
 
         // Initialize with proper structure to avoid undefined errors
         this.state = useState({
@@ -37,6 +39,9 @@ export class Dashboard extends Component {
                     direction: 'asc'
                 }
             },
+            // Add search state variables
+            searchTerm: '',
+            originalProjects: [], // Store original projects list for search filtering
         });
         
         // Format number to XXX,XXX,XXX.XX format
@@ -144,6 +149,40 @@ export class Dashboard extends Component {
             return '';
         };
         
+        // Handle search functionality
+        this.handleSearch = (searchTerm) => {
+            this.state.searchTerm = searchTerm;
+            
+            // If search is empty, restore original projects list
+            if (!searchTerm.trim()) {
+                this.state.main_data.projects = [...this.state.originalProjects];
+            } else {
+                const term = searchTerm.toLowerCase().trim();
+                // Filter projects based on search term (project name and customer)
+                this.state.main_data.projects = this.state.originalProjects.filter(project => {
+                    return (
+                        (project.project && project.project.toLowerCase().includes(term)) || 
+                        (project.customer && project.customer.toLowerCase().includes(term))
+                    );
+                });
+            }
+            
+            // Re-apply sorting to the filtered list
+            this.state.main_data.projects = this.sortProjects(this.state.main_data.projects);
+        };
+        
+        // Clear search function
+        this.clearSearch = () => {
+            this.state.searchTerm = '';
+            this.state.main_data.projects = [...this.state.originalProjects];
+            this.state.main_data.projects = this.sortProjects(this.state.main_data.projects);
+            
+            // Clear the search input field
+            if (this.refs.searchInput) {
+                this.refs.searchInput.value = '';
+            }
+        };
+        
         useEffect(
             () => {
                 // Only update if dashboard_data exists and is valid JSON
@@ -185,6 +224,9 @@ export class Dashboard extends Component {
                                 return formattedProject;
                             });
                             
+                            // Store original projects for search filtering
+                            this.state.originalProjects = [...parsedData.projects];
+                            
                             // Apply initial sorting
                             parsedData.projects = this.sortProjects(parsedData.projects);
                         }
@@ -219,6 +261,20 @@ export class Dashboard extends Component {
             },
             () => [this.props.record.data.dashboard_data]
         );
+    }
+
+    openProjectDetails(projectId) {
+        this.actionService.doAction({
+            type: 'ir.actions.act_window',
+            res_model: 'l3.dashboard',
+            view_mode: 'form',
+            views: [[false, 'form']],
+            target: 'currect',
+            name: 'L3 Dashboard',
+            context: {
+                default_project_id: projectId
+            },
+        });
     }
 }
 

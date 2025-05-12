@@ -1,0 +1,65 @@
+.l3-dashboard {
+    background: #fff;
+    padding: 1.5rem;
+  
+    .header {
+      background: #f7b500;
+      padding: 10px 20px;
+      font-weight: bold;
+    }
+  
+    .filters {
+      margin: 10px 0;
+      display: flex;
+      gap: 10px;
+  
+      .filter-input {
+        border: 1px solid #ccc;
+        padding: 5px 10px;
+        border-radius: 3px;
+      }
+    }
+  
+    .report-section {
+      .sub-header {
+        background-color: #0097a7;
+        color: white;
+        padding: 8px;
+        font-weight: bold;
+      }
+  
+      .report-table {
+        width: 100%;
+        border-collapse: collapse;
+  
+        th, td {
+          padding: 6px 10px;
+          border: 1px solid #ccc;
+        }
+  
+        .bg-yellow {
+          background-color: #ffc107;
+        }
+  
+        .text-red {
+          color: red;
+        }
+  
+        .fw-bold {
+          font-weight: bold;
+          background: #f9f9f9;
+        }
+      }
+    }
+
+    .table th {
+      border: 1px solid #000 !important;
+      vertical-align: middle;
+    }
+
+    .table th {
+      background-color: #ffc107 !important;
+      color: #000;
+      font-weight: bold;
+    }
+}

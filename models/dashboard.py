@@ -654,54 +654,14 @@ class L1Dashboard(models.Model):
         Returns:
             dict: Dictionary containing local and export revenue
         """
-        # Performance optimization: Use search_read to get only needed fields
-        local_tag_id = self.env['project.tags'].search([('name', '=', 'Local')], limit=1).id
-        export_tag_id = self.env['project.tags'].search([('name', '=', 'Export')], limit=1).id
-        
-        if not (local_tag_id or export_tag_id):
-            return {'local_revenue': 0.0, 'export_revenue': 0.0}
-        
-        # Get projects with their tags in one query
-        projects = self.env['project.project'].search_read(
-            [('tag_ids', 'in', [local_tag_id, export_tag_id])],
-            ['id', 'tag_ids']
-        )
-        
-        # Classify projects by tag
-        local_project_ids = []
-        export_project_ids = []
-        
-        for project in projects:
-            if local_tag_id in project['tag_ids']:
-                local_project_ids.append(project['id'])
-            if export_tag_id in project['tag_ids']:
-                export_project_ids.append(project['id'])
-        
-        if not (local_project_ids or export_project_ids):
-            return {'local_revenue': 0.0, 'export_revenue': 0.0}
-        
-        # Find all sale orders related to these projects
-        domain = [
-            ('project_ids', 'in', local_project_ids + export_project_ids),
-            ('company_id', '=', self.company_id.id),
-            ('state', 'in', ['sale', 'done'])
-        ]
-        
-        sale_orders = self.env['sale.order'].search_read(domain, ['id', 'project_ids'])
-        
-        # Classify sale orders by project type
-        local_sale_order_ids = set()
-        export_sale_order_ids = set()
-        
-        for order in sale_orders:
-            order_projects = set(order['project_ids'])
-            if any(project_id in order_projects for project_id in local_project_ids):
-                local_sale_order_ids.add(order['id'])
-            if any(project_id in order_projects for project_id in export_project_ids):
-                export_sale_order_ids.add(order['id'])
-        
-        if not (local_sale_order_ids or export_sale_order_ids):
-            return {'local_revenue': 0.0, 'export_revenue': 0.0}
+        local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
+        export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
+
+        local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])])
+        export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])])
+
+        local_analytic_account_ids = local_projects.mapped('analytic_account_id').ids
+        export_analytic_account_ids = export_projects.mapped('analytic_account_id').ids
         
         # Get posted customer invoices in the date range related to these sale orders
         invoice_domain = [
@@ -709,24 +669,36 @@ class L1Dashboard(models.Model):
             ('invoice_date', '<=', end_date),
             ('move_type', '=', 'out_invoice'),
             ('state', '=', 'posted'),
-            ('sale_id', 'in', list(local_sale_order_ids | export_sale_order_ids)),
             ('company_id', '=', self.company_id.id),
         ]
+        customer_invoices = self.env['account.move'].search(invoice_domain)
         
-        invoices = self.env['account.move'].search_read(
-            invoice_domain, 
-            ['id', 'sale_id', 'amount_untaxed_signed']
-        )
-        
-        # Calculate revenue
+        # Calculate revenue without tax
         total_local_revenue = total_export_revenue = 0.0
-        
-        for invoice in invoices:
-            sale_id = invoice['sale_id'] and invoice['sale_id'][0]
-            if sale_id in local_sale_order_ids:
-                total_local_revenue += invoice['amount_untaxed_signed']
-            if sale_id in export_sale_order_ids:
-                total_export_revenue += invoice['amount_untaxed_signed']
+
+        for invoice in customer_invoices:
+            for line in invoice.invoice_line_ids:
+                if line.analytic_distribution:
+                    try:
+                        distribution = line.analytic_distribution
+                        if not isinstance(distribution, dict):
+                            distribution = json.loads(distribution) if distribution else {}
+                        
+                        for account_id_str, percentage in distribution.items():
+                            account_id = int(account_id_str)
+                            
+                            if account_id in local_analytic_account_ids:
+                                # Calculate the allocated amount based on percentage
+                                total_local_revenue += line.price_subtotal
+                                break
+                                
+                            if account_id in export_analytic_account_ids:
+                                total_export_revenue += line.price_subtotal
+                                break
+
+                    except Exception as e:
+                        _logger.error("Error processing analytic distribution for invoice %s, line %s: %s", 
+                                    invoice.id, line.id, str(e))
         
         return {
             'local_revenue': total_local_revenue,

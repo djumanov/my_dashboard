@@ -1,0 +1,108 @@
+<templates xml:space="preserve">
+  <t t-name="custom.l3_dashboard" owl="1">
+    <div class="container-fluid bg-white py-4 px-5" style="font-family: 'Times New Roman'; min-height: 100vh;">
+
+      <!-- Title -->
+      <h2 class="fw-bold text-dark border-bottom border-4 border-warning pb-2 mb-4" style="font-size: 1.75rem;">
+        L4 Dashboard
+      </h2>
+
+      <!-- Filters 
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <span class="fw-semibold text-secondary">FILTER</span>
+
+        <select class="form-select" t-model="state.filters.region">
+          <option value="">Loc/Export</option>
+          <option value="Local">Local</option>
+          <option value="Export">Export</option>
+        </select>
+
+        <select class="form-select" t-model="state.filters.month">
+          <option value="">Month</option>
+          <t t-foreach="state.months" t-as="m" t-key="m">
+            <option t-att-value="m" t-esc="m" />
+          </t>
+        </select>
+
+        <select class="form-select" t-model="state.filters.year">
+          <option value="">Year</option>
+          <t t-foreach="state.years" t-as="y" t-key="y">
+            <option t-att-value="y" t-esc="y" />
+          </t>
+        </select>
+
+        <select class="form-select"  t-model="state.filters.project">
+          <option value="">Project</option>
+          <t t-foreach="state.projects" t-as="p" t-key="p.id">
+            <option t-att-value="p.id" t-esc="p.name" />
+          </t>
+        </select>
+      </div>
+      -->
+
+      <!-- Project Info -->
+      <div class="table-responsive mb-4">
+        <table class="table table-bordered border-dark align-middle w-100">
+          <tbody>
+            <tr><th class="bg-warning text-dark">Project Name</th><td colspan="5"><t t-esc="state.project.name" /></td></tr>
+            <tr><th class="bg-warning text-dark">Customer</th><td colspan="5"><t t-esc="state.project.customer" /></td></tr>
+            <tr><th class="bg-warning text-dark">PO Value</th><td colspan="5"><t t-esc="this.formatNumber(state.project.po_value)" /></td></tr>
+            <tr><th class="bg-warning text-dark">Start Date</th><td colspan="5"><t t-esc="state.project.start_date" /></td></tr>
+            <tr><th class="bg-warning text-dark">End Date</th><td colspan="5"><t t-esc="state.project.end_date" /></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Main Table -->
+      <div class="table-responsive">
+        <table class="table table-bordered border-dark w-100 align-middle text-center">
+          <thead class="bg-warning text-dark fw-bold">
+            <tr>
+              <th>Milestone / Description</th>
+              <th>Date</th>
+              <th>Invoiced</th>
+              <th>Collected</th>
+              <th>Pending Collection</th>
+              <th>Outstanding Aging</th>
+              <th>Vendor Invoice</th>
+              <th>Payment Made</th>
+              <th>Payment to be Made</th>
+              <th>Payroll Cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            <t t-foreach="state.project.milestones || []" t-as="m" t-key="m.id">
+              <tr>
+                <td class="text-start"><t t-esc="m.description" /></td>
+                <td><t t-esc="m.date" /></td>
+                <td><t t-esc="this.formatNumber(m.invoiced)" /></td>
+                <td><t t-esc="this.formatNumber(m.collected)" /></td>
+                <td><t t-esc="this.formatNumber(m.pending_collection)" /></td>
+                <td><t t-esc="m.outstanding_aging" /></td>
+                <td><t t-esc="this.formatNumber(m.vendor_invoice)" /></td>
+                <td><t t-esc="this.formatNumber(m.payment_made)" /></td>
+                <td><t t-esc="this.formatNumber(m.payment_to_be_made)" /></td>
+                <td></td>
+              </tr>
+            </t>
+
+            <!-- Totals -->
+            <tr class="bg-secondary text-white fw-bold">
+              <td class="text-start">Total</td>
+              <td></td>
+              <td><t t-esc="this.formatNumber(state.project.total_invoiced)" /></td>
+              <td><t t-esc="this.formatNumber(state.project.total_collected)" /></td>
+              <td><t t-esc="this.formatNumber(state.project.total_pending_collection)" /></td>
+              <td></td>
+              <td><t t-esc="this.formatNumber(state.project.total_vendor_invoice)" /></td>
+              <td><t t-esc="this.formatNumber(state.project.total_payment_made)" /></td>
+              <td><t t-esc="this.formatNumber(state.project.total_payment_to_be_made)" /></td>
+              <td><t t-esc="this.formatNumber(state.project.total_payroll_cost)" /></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </t>
+</templates>

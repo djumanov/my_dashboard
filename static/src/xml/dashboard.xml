@@ -282,6 +282,30 @@
     <!-- L4 Dashboard Page -->
     <t t-name="custom.l4_dashboard" owl="1">
         <div class="l4-dashboard-container py-3 px-4">
+            <!-- Search Input Field -->
+            <div class="mb-3 d-flex">
+                <div class="input-group">
+                    <span class="input-group-text bg-light">
+                        <i class="fa fa-search"></i>
+                    </span>
+                    <input 
+                        type="text" 
+                        class="form-control" 
+                        placeholder="Search by project or customer..." 
+                        t-on-input="(e) => this.handleSearch(e.target.value)"
+                        t-ref="searchInput"
+                    />
+                    <button 
+                        class="btn btn-outline-secondary" 
+                        type="button"
+                        t-on-click="() => this.clearSearch()"
+                        t-if="state.searchTerm"
+                    >
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
             <div class="mb-2 p-2 bg-primary text-white fw-bold rounded">Project Delivery Report</div>
             <!-- Dashboard Content -->
             <div class="card shadow-sm">
@@ -368,7 +392,7 @@
                             </t>
 
                             <t t-foreach="this.state.main_data.projects || []" t-as="row" t-key="row.project">
-                                <tr class="project-row cursor-pointer" t-att-data-project-id="row.id">
+                                <tr class="project-row cursor-pointer" t-att-data-project-id="row.id" t-on-click="() => this.openProjectDetails(row.project_id)">
                                     <td class="border-end" style="position: sticky; left: 0; z-index: 5; background-color: inherit;">
                                         <div class="d-flex align-items-center">
                                             <span t-att-class="row.region === 'Local' ? 'badge bg-info me-2' : 'badge bg-success me-2'">
@@ -466,8 +490,9 @@
                                 <td class="border-end text-end">
                                     <t t-esc="this.state.main_data.summary.total_margin" />
                                 </td>
-                                <td class="text-end">
-                                    <t t-esc="0" />
+                                <td class="text-end" t-att-class="this.state.main_data.summary.avg_margin_percent lt 0 ? 'text-danger' : 
+                                                                                                (this.state.main_data.summary.avg_margin_percent gte 20 ? 'text-success fw-bold' : '')">
+                                    <t t-esc="this.state.main_data.summary.avg_margin_percent" />
                                 </td>
                             </tr>
                         </tbody>

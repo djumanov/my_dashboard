@@ -4,14 +4,15 @@
     'summary': 'Advanced DrukSmart Dashboard',
     'description': """
         Comprehensive L1, L2, L3, L4, L5 Dashboard
-        ==========================
-        * Sales, Revenue, Expenses and Cash Flow tracking
+        =========================================
+        * Sales, Revenue, Expenses, and Cash Flow tracking
         * Employee statistics
         * Advanced filtering capabilities
     """,
     'author': 'Odoo team',
     'website': '',
     'category': 'Productivity',
+    'license': 'LGPL-3', 
     'depends': [
         'base',
         'sale_management',
@@ -23,6 +24,7 @@
         'security/ir.model.access.csv',
         'views/dashboard.xml',
         'views/l2_dashboard.xml',
+        'views/l3_dashboard.xml',
         'views/l4_dashboard.xml',
         'views/sale_target.xml',
         'views/menu.xml',
@@ -40,5 +42,4 @@
     'application': True,
     'installable': True,
     'auto_install': False,
-    'license': 'LGPL-3',
 }

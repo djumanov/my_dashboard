@@ -39,7 +39,19 @@ export class Dashboard extends Component {
                     beta: 0
                 },
                 width: 400,
-                height: 350
+                height: 350,
+                events: {
+                    load: function () {
+                        // Grafik yuklangach, barcha data label span’lariga width beramiz
+                        const spans = document.querySelectorAll(`#${id} span[style*="position: absolute"]`);
+                        spans.forEach(span => {
+                            span.style.width = '90px';
+                            span.style.whiteSpace = 'nowrap'; // matn o‘ramasin
+                            span.style.overflow = 'visible';  // kesilmasin
+                            span.style.textOverflow = 'unset'; // ellipsis olib tashlash
+                        });
+                    }
+                }
             },
             title: { text: '' },
             legend: {
@@ -49,13 +61,13 @@ export class Dashboard extends Component {
             },
             tooltip: {
                 useHTML: true,
-                backgroundColor: '#000',       // dark background
-                borderRadius: 8,               // rounded corners
-                borderWidth: 0,                // no border
+                backgroundColor: '#000',
+                borderRadius: 8,
+                borderWidth: 0,
                 style: {
-                    color: '#fff',             // white text
-                    fontSize: '16px',          // ⬆️ bigger font
-                    padding: 12                // ⬆️ more padding
+                    color: '#fff',
+                    fontSize: '16px',
+                    padding: 12
                 },
                 formatter: function () {
                     const formattedValue = Highcharts.numberFormat(this.y, 0, '.', ',');
@@ -85,7 +97,8 @@ export class Dashboard extends Component {
                                 font-weight: 600;
                                 font-size: 14px;
                                 text-align: center;
-                                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                                white-space: nowrap;
+                                display: inline-block;
                             ">${formattedValue}</div>`;
                         },
                         align: 'center'
@@ -101,11 +114,11 @@ export class Dashboard extends Component {
         });
     }
     
-    
 
     drawBar() {
-        const categories = this.state.main_data.hr?.categories.map(item => item.name);
-        const data = this.state.main_data.hr?.categories.map(item => item.count);
+        const categories = this.state.main_data.hr?.categories.map(item => item.name) || [];
+        const data = this.state.main_data.hr?.categories.map(item => item.count) || [];
+    
         Highcharts.chart('category', {
             chart: {
                 type: 'column',
@@ -140,6 +153,10 @@ export class Dashboard extends Component {
                 title: { text: '' },
                 allowDecimals: false
             },
+            tooltip: {
+                enabled: true,
+                pointFormat: '<b>{item.count}</b>'
+            },
             plotOptions: {
                 column: {
                     depth: 25,
@@ -150,13 +167,13 @@ export class Dashboard extends Component {
                 name: 'Count',
                 data: data,
                 colorByPoint: true,
-                colors: ['#1e88e5'],
-                dataLabels: {   
-                    enabled: true,
-                    format: '{y}',
-                }
+                colors: ['#1e88e5','#f28e2c'],
+                // dataLabels: {   
+                //     enabled: true,
+                //     format: '{y}',
+                // }
             }]
-        });        
+        });
     }
 
     drawBarHorizontal() {        
@@ -190,6 +207,10 @@ export class Dashboard extends Component {
             yAxis: {
                 title: { text: null },
                 allowDecimals: false
+            },
+            tooltip: {
+                enabled: true,
+                pointFormat: '<b>{point.y}</b> Employees'
             },
             plotOptions: {
                 bar: {
