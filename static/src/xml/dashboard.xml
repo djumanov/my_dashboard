@@ -602,13 +602,13 @@
                         <div class="d-flex align-items-center">
                             <span class="badge bg-info me-1">Local</span>
                             <span class="text-muted small">
-                                <t t-esc="this.state.main_data.total_local_untaxed" />
+                                <t t-esc="this.state.main_data.total_sales_local_untaxed" />
                             </span>
                         </div>
                         <div class="d-flex align-items-center">
                             <span class="badge bg-success me-1">Export</span>
                             <span class="text-muted small">
-                                <t t-esc="this.state.main_data.total_export_untaxed" />
+                                <t t-esc="this.state.main_data.total_sales_export_untaxed" />
                             </span>
                         </div>
                     </div>
@@ -700,13 +700,13 @@
                         <div class="d-flex align-items-center">
                             <span class="badge bg-info me-1">Local</span>
                             <span class="text-muted small">
-                                <t t-esc="this.state.main_data.total_local_untaxed" />
+                                <t t-esc="this.state.main_data.total_local_revenue_untaxed" />
                             </span>
                         </div>
                         <div class="d-flex align-items-center">
                             <span class="badge bg-success me-1">Export</span>
                             <span class="text-muted small">
-                                <t t-esc="this.state.main_data.total_export_untaxed" />
+                                <t t-esc="this.state.main_data.total_export_revenue_untaxed" />
                             </span>
                         </div>
                     </div>
@@ -714,7 +714,7 @@
             </div>
 
             <!-- Sales Report -->
-            <div class="mb-2 mt-5 p-2 bg-primary text-white fw-bold rounded">Sales Report</div>
+            <div class="mb-2 mt-5 p-2 bg-primary text-white fw-bold rounded">Vendor Bills Report</div>
             <div class="card shadow-sm">
                 <div class="table-responsive">
                     <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
@@ -724,7 +724,10 @@
                                     Date
                                 </th>
                                 <th class="border-end fw-bold">
-                                    Sale Order No
+                                    Bill No
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Vendor
                                 </th>
                                 <th class="border-end fw-bold">
                                     Local/Export
@@ -733,18 +736,18 @@
                                     Tags
                                 </th>
                                 <th class="border-end fw-bold">
-                                    Customer
+                                    Source Document
                                 </th>
                                 <th class="border-end fw-bold">
-                                    Sale Person
+                                    Tax Excluded
                                 </th>
                                 <th class="border-end fw-bold">
-                                    Untaxed Amount
+                                    Payment Status
                                 </th>
                             </tr>
                         </thead>
                         <tbody>
-                            <t t-if="!this.state.main_data.sales">
+                            <t t-if="!this.state.main_data.expenses">
                                 <tr>
                                     <td colspan="16" class="text-center py-4">
                                         <div class="text-muted">
@@ -754,13 +757,16 @@
                                 </tr>
                             </t>
 
-                            <t t-foreach="this.state.main_data.sales || []" t-as="row" t-key="row.sale_id">
+                            <t t-foreach="this.state.main_data.expenses || []" t-as="row" t-key="row.expense_id">
                                 <tr class="project-row">
                                     <td class="border-end fw-medium">
                                         <t t-esc="row.date" />
                                     </td>
                                     <td class="border-end fw-medium">
-                                        <t t-esc="row.sales_order_no" />
+                                        <t t-esc="row.bill_no" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.vendor" />
                                     </td>
                                     <td class="border-end fw-medium">
                                         <t t-esc="row.local_export" />
@@ -769,13 +775,13 @@
                                         <t t-esc="row.tags" />
                                     </td>
                                     <td class="border-end fw-medium">
-                                        <t t-esc="row.customer" />
-                                    </td>
-                                    <td class="border-end fw-medium">
-                                        <t t-esc="row.sale_person" />
+                                        <t t-esc="row.source_document" />
                                     </td>
                                     <td class="border-end text-end">
-                                        <t t-esc="row.untaxed_amount" />
+                                        <t t-esc="row.tax_excluded" />
+                                    </td>
+                                    <td class="border-end text-end">
+                                        <t t-esc="row.payment_status" />
                                     </td>
                                 </tr>
                             </t>
@@ -791,18 +797,22 @@
                     <div class="d-flex gap-3">
                         <div class="d-flex align-items-center">
                             <span class="badge bg-info me-1">Local</span>
-                            <span class="text-muted small">344,325,215.23</span>
+                            <span class="text-muted small">
+                                <t t-esc="this.state.main_data.total_local_expense_untaxed" />
+                            </span>
                         </div>
                         <div class="d-flex align-items-center">
                             <span class="badge bg-success me-1">Export</span>
-                            <span class="text-muted small">344,325,215.23</span>
+                            <span class="text-muted small">
+                                <t t-esc="this.state.main_data.total_export_expense_untaxed" />
+                            </span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Sales Report -->
-            <div class="mb-2 mt-5 p-2 bg-primary text-white fw-bold rounded">Sales Report</div>
+            <!-- Cashflow Report -->
+            <div class="mb-2 mt-5 p-2 bg-primary text-white fw-bold rounded">Cashflow Report</div>
             <div class="card shadow-sm">
                 <div class="table-responsive">
                     <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
@@ -812,7 +822,10 @@
                                     Date
                                 </th>
                                 <th class="border-end fw-bold">
-                                    Sale Order No
+                                    Inflow/Outflow
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Project
                                 </th>
                                 <th class="border-end fw-bold">
                                     Local/Export
@@ -821,18 +834,18 @@
                                     Tags
                                 </th>
                                 <th class="border-end fw-bold">
-                                    Customer
+                                    Source Document
                                 </th>
                                 <th class="border-end fw-bold">
-                                    Sale Person
+                                    Payment Amount
                                 </th>
                                 <th class="border-end fw-bold">
-                                    Untaxed Amount
+                                    Payment Status
                                 </th>
                             </tr>
                         </thead>
                         <tbody>
-                            <t t-if="!this.state.main_data.sales">
+                            <t t-if="!this.state.main_data.cashflows">
                                 <tr>
                                     <td colspan="16" class="text-center py-4">
                                         <div class="text-muted">
@@ -842,13 +855,16 @@
                                 </tr>
                             </t>
 
-                            <t t-foreach="this.state.main_data.sales || []" t-as="row" t-key="row.sale_id">
+                            <t t-foreach="this.state.main_data.cashflows || []" t-as="row" t-key="row.cashflow_id">
                                 <tr class="project-row">
                                     <td class="border-end fw-medium">
                                         <t t-esc="row.date" />
                                     </td>
                                     <td class="border-end fw-medium">
-                                        <t t-esc="row.sales_order_no" />
+                                        <t t-esc="row.inflow_outflow" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.project" />
                                     </td>
                                     <td class="border-end fw-medium">
                                         <t t-esc="row.local_export" />
@@ -857,13 +873,13 @@
                                         <t t-esc="row.tags" />
                                     </td>
                                     <td class="border-end fw-medium">
-                                        <t t-esc="row.customer" />
+                                        <t t-esc="row.source_document" />
                                     </td>
                                     <td class="border-end fw-medium">
-                                        <t t-esc="row.sale_person" />
+                                        <t t-esc="row.payment_amount" />
                                     </td>
                                     <td class="border-end text-end">
-                                        <t t-esc="row.untaxed_amount" />
+                                        <t t-esc="row.payment_status" />
                                     </td>
                                 </tr>
                             </t>
@@ -879,11 +895,15 @@
                     <div class="d-flex gap-3">
                         <div class="d-flex align-items-center">
                             <span class="badge bg-info me-1">Local</span>
-                            <span class="text-muted small">344,325,215.23</span>
+                            <span class="text-muted small">
+                                <t t-esc="this.state.main_data.net_local_cashflow" />
+                            </span>
                         </div>
                         <div class="d-flex align-items-center">
                             <span class="badge bg-success me-1">Export</span>
-                            <span class="text-muted small">344,325,215.23</span>
+                            <span class="text-muted small">
+                                <t t-esc="this.state.main_data.net_export_cashflow" />
+                            </span>
                         </div>
                     </div>
                 </div>
