@@ -18,13 +18,13 @@
                         padding-top: 0;
                     }
                 </style>
-                <div class="o_form_view_container" style="width: 90%; margin: auto;">
+                <div class="o_form_view_container" style="width: 100%; margin: auto;">
                     <!-- Header section with Dashboard title on the left and filters on the right -->
                     <div class="row align-items-center mt-3 mb-2">
                         
                         <!-- Left side (Dashboard Title) -->
                         <div class="col-md-6 col-sm-12 text-start">
-                            <h1 class="my-0" style="text-align: right;">L4 Dashboard</h1>
+                            <h1 class="my-0" style="text-align: right;">Project Information</h1>
                         </div>
 
                         <!-- Right side (Filters) -->

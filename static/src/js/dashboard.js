@@ -154,32 +154,53 @@ export class Dashboard extends Component {
                 allowDecimals: false
             },
             tooltip: {
-                enabled: true,
-                pointFormat: '<b>{item.count}</b>'
+                useHTML: true,
+                backgroundColor: '#000',
+                borderRadius: 8,
+                borderWidth: 0,
+                style: {
+                    color: '#fff',
+                    fontSize: '14px',
+                    padding: 12
+                },
+                formatter: function () {
+                    return `<b style="color:${this.color}; font-size: 14px;">${this.key}</b><br/>
+                            <span style="font-size: 13px;">${this.series.name}:</span> 
+                            <b style="font-size: 14px;">${this.y}</b>`;
+                }
             },
             plotOptions: {
                 column: {
                     depth: 25,
-                    beta: 15,
+                    dataLabels: {
+                        enabled: true,
+                        color: '#000',
+                        style: {
+                            fontWeight: 'bold',
+                            fontSize: '13px'
+                        },
+                        verticalAlign: 'top',
+                        inside: false,
+                        formatter: function () {
+                            return this.y;
+                        }
+                    }
                 }
             },
             series: [{
                 name: 'Count',
                 data: data,
                 colorByPoint: true,
-                colors: ['#1e88e5','#f28e2c'],
-                // dataLabels: {   
-                //     enabled: true,
-                //     format: '{y}',
-                // }
+                colors: ['#1e88e5', '#f28e2c']
             }]
         });
     }
+    
 
     drawBarHorizontal() {        
         const categories = this.state.main_data.hr?.departments.map(item => item.name);
         const data = this.state.main_data.hr?.departments.map(item => item.count);
-        
+    
         Highcharts.chart('department', {
             chart: {
                 type: 'bar',
@@ -189,7 +210,8 @@ export class Dashboard extends Component {
                     beta: 0,
                     depth: 50,
                     viewDistance: 25
-                }
+                },
+                backgroundColor: 'transparent', // optional for cleaner look
             },
             title: {
                 text: '',
@@ -206,39 +228,62 @@ export class Dashboard extends Component {
             },
             yAxis: {
                 title: { text: null },
-                allowDecimals: false
+                allowDecimals: false,
+                labels: {
+                    enabled: true
+                }
             },
             tooltip: {
-                enabled: true,
-                pointFormat: '<b>{point.y}</b> Employees'
+                useHTML: true,
+                backgroundColor: '#000',
+                borderRadius: 6,
+                style: {
+                    color: '#fff',
+                    fontSize: '14px'
+                },
+                formatter: function () {
+                    return `<b>${this.key}</b>: ${this.y} Employees`;
+                }
             },
             plotOptions: {
+                series: {
+                    animation: true
+                },
                 bar: {
-                    depth: 25
+                    depth: 25,
+                    dataLabels: {
+                        enabled: true,
+                        inside: false,
+                        allowOverlap: true,
+                        crop: false,
+                        overflow: 'none',
+                        formatter: function () {
+                            return `${this.y}`;
+                        },
+                        style: {
+                            fontWeight: 'bold',
+                            fontSize: '13px',
+                            color: '#000'
+                        }
+                    }
                 }
             },
             series: [{
                 name: 'Count',
                 data: data,
                 colorByPoint: true,
-                colors: ['#1e88e5'],
-                dataLabels: {   
-                    enabled: true,
-                    format: '{y}',
-                }
+                colors: ['#1e88e5']
             }]
         });
     }
+    
+    
 
-    drawChartIncome(){
+    drawChartIncome() {
         const categories = this.state.main_data.cash_flow.region_wise.inflow.map(item => item.name);
-
-        // Inflow va Outflow qiymatlarini olish
         const inflowData = this.state.main_data.cash_flow.region_wise.inflow.map(item => item.value);
         const outflowData = this.state.main_data.cash_flow.region_wise.outflow.map(item => item.value);
-            
-
-        // Highcharts
+    
         Highcharts.chart('cash', {
             chart: {
                 type: 'column',
@@ -273,17 +318,29 @@ export class Dashboard extends Component {
             },
             yAxis: {
                 title: { text: null },
-                labels: { enabled: false }, // Y-o'q raqamlarini yashirish
-                gridLineWidth: 0, // Orqa fon chiziqlarini olib tashlash
-                lineWidth: 0 // Y-o'qning o'zini ham o'chirish
+                labels: { enabled: false },
+                gridLineWidth: 0,
+                lineWidth: 0
             },
             tooltip: {
-                pointFormat: '{series.name}: <b>${point.y:,.0f}</b>'
+                useHTML: true,
+                backgroundColor: '#000',
+                borderRadius: 6,
+                borderWidth: 0,
+                style: {
+                    color: '#fff',
+                    fontSize: '14px'
+                },
+                formatter: function () {
+                    const value = Highcharts.numberFormat(this.y, 0, '.', ',');
+                    return `<b style="color:${this.color}">${this.series.name}</b>: <b>${value}</b>`;
+                }
+                
             },
             plotOptions: {
                 column: {
                     depth: 25,
-                    grouping: true, // Yonma-yon chiqishi uchun
+                    grouping: true,
                     dataLabels: {
                         enabled: true,
                         formatter: function () {
@@ -316,8 +373,8 @@ export class Dashboard extends Component {
                 }
             ]
         });
-
     }
+    
     
     pieData(source) {
         return source.data.map(info => ({

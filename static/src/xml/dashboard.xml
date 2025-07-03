@@ -86,7 +86,7 @@
     </t>
 
     <!-- L2 Dashboard Page -->
-    <t t-name="custom.l2_dashboard" owl="1" style="display: None;">
+    <t t-name="custom.l2_dashboard" owl="1">
         <div class="l2-dashboard-container">
             <div t-if="state.isLoading" class="text-center my-5">
                 <div class="spinner-border text-primary" role="status">
@@ -516,6 +516,378 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </t>
+
+    <!-- Dashboard Reports -->
+    <t t-name="custom.druksmart_dashboard_reports" owl="1">
+        <div class="dashboard-wrapper">
+
+            <!-- Sales Report -->
+            <div class="mb-2 p-2 bg-primary text-white fw-bold rounded">Sales Report</div>
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
+                        <thead>
+                            <tr class="bg-light">
+                                <th class="border-end fw-bold">
+                                    Date
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Sale Order No
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Local/Export
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Tags
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Customer
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Sale Person
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Untaxed Amount
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-if="!this.state.main_data.sales">
+                                <tr>
+                                    <td colspan="16" class="text-center py-4">
+                                        <div class="text-muted">
+                                            <i class="fa fa-info-circle me-1" /> No projects found matching the current filters
+                                        </div>
+                                    </td>
+                                </tr>
+                            </t>
+
+                            <t t-foreach="this.state.main_data.sales || []" t-as="row" t-key="row.sale_id">
+                                <tr class="project-row">
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.date" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.sales_order_no" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.local_export" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.tags" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.customer" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.sale_person" />
+                                    </td>
+                                    <td class="border-end text-end">
+                                        <t t-esc="row.untaxed_amount" />
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Summary and Legend -->
+                <div class="p-3 border-top d-flex justify-content-between">
+                    <div class="text-muted small">
+                        <i class="fa fa-info-circle me-1"></i> This report provides a detailed view of sales orders, including local and export sales, along with associated tags and customer information.
+                    </div>
+                    <div class="d-flex gap-3">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-info me-1">Local</span>
+                            <span class="text-muted small">
+                                <t t-esc="this.state.main_data.total_local_untaxed" />
+                            </span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-success me-1">Export</span>
+                            <span class="text-muted small">
+                                <t t-esc="this.state.main_data.total_export_untaxed" />
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revenue Report -->
+            <div class="mb-2 mt-5 p-2 bg-primary text-white fw-bold rounded">Revenue Report</div>
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
+                        <thead>
+                            <tr class="bg-light">
+                                <th class="border-end fw-bold">
+                                    Date
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Invoice No
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Sale Order No
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Local/Export
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Tags
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Customer
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Untaxed Amount
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Payment Status
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-if="!this.state.main_data.revenues">
+                                <tr>
+                                    <td colspan="16" class="text-center py-4">
+                                        <div class="text-muted">
+                                            <i class="fa fa-info-circle me-1" /> No projects found matching the current filters
+                                        </div>
+                                    </td>
+                                </tr>
+                            </t>
+
+                            <t t-foreach="this.state.main_data.revenues || []" t-as="row" t-key="row.revenue_id">
+                                <tr class="project-row">
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.date" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.invoice_no" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.sales_order_no" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.local_export" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.tags" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.customer" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.untaxed_amount" />
+                                    </td>
+                                    <td class="border-end text-end">
+                                        <t t-esc="row.payment_status" />
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Summary and Legend -->
+                <div class="p-3 border-top d-flex justify-content-between">
+                    <div class="text-muted small">
+                        <i class="fa fa-info-circle me-1"></i> This report provides a detailed view of sales orders, including local and export sales, along with associated tags and customer information.
+                    </div>
+                    <div class="d-flex gap-3">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-info me-1">Local</span>
+                            <span class="text-muted small">
+                                <t t-esc="this.state.main_data.total_local_untaxed" />
+                            </span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-success me-1">Export</span>
+                            <span class="text-muted small">
+                                <t t-esc="this.state.main_data.total_export_untaxed" />
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sales Report -->
+            <div class="mb-2 mt-5 p-2 bg-primary text-white fw-bold rounded">Sales Report</div>
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
+                        <thead>
+                            <tr class="bg-light">
+                                <th class="border-end fw-bold">
+                                    Date
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Sale Order No
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Local/Export
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Tags
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Customer
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Sale Person
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Untaxed Amount
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-if="!this.state.main_data.sales">
+                                <tr>
+                                    <td colspan="16" class="text-center py-4">
+                                        <div class="text-muted">
+                                            <i class="fa fa-info-circle me-1" /> No projects found matching the current filters
+                                        </div>
+                                    </td>
+                                </tr>
+                            </t>
+
+                            <t t-foreach="this.state.main_data.sales || []" t-as="row" t-key="row.sale_id">
+                                <tr class="project-row">
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.date" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.sales_order_no" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.local_export" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.tags" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.customer" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.sale_person" />
+                                    </td>
+                                    <td class="border-end text-end">
+                                        <t t-esc="row.untaxed_amount" />
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Summary and Legend -->
+                <div class="p-3 border-top d-flex justify-content-between">
+                    <div class="text-muted small">
+                        <i class="fa fa-info-circle me-1"></i> This report provides a detailed view of sales orders, including local and export sales, along with associated tags and customer information.
+                    </div>
+                    <div class="d-flex gap-3">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-info me-1">Local</span>
+                            <span class="text-muted small">344,325,215.23</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-success me-1">Export</span>
+                            <span class="text-muted small">344,325,215.23</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sales Report -->
+            <div class="mb-2 mt-5 p-2 bg-primary text-white fw-bold rounded">Sales Report</div>
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
+                        <thead>
+                            <tr class="bg-light">
+                                <th class="border-end fw-bold">
+                                    Date
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Sale Order No
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Local/Export
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Tags
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Customer
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Sale Person
+                                </th>
+                                <th class="border-end fw-bold">
+                                    Untaxed Amount
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-if="!this.state.main_data.sales">
+                                <tr>
+                                    <td colspan="16" class="text-center py-4">
+                                        <div class="text-muted">
+                                            <i class="fa fa-info-circle me-1" /> No projects found matching the current filters
+                                        </div>
+                                    </td>
+                                </tr>
+                            </t>
+
+                            <t t-foreach="this.state.main_data.sales || []" t-as="row" t-key="row.sale_id">
+                                <tr class="project-row">
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.date" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.sales_order_no" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.local_export" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.tags" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.customer" />
+                                    </td>
+                                    <td class="border-end fw-medium">
+                                        <t t-esc="row.sale_person" />
+                                    </td>
+                                    <td class="border-end text-end">
+                                        <t t-esc="row.untaxed_amount" />
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Summary and Legend -->
+                <div class="p-3 border-top d-flex justify-content-between">
+                    <div class="text-muted small">
+                        <i class="fa fa-info-circle me-1"></i> This report provides a detailed view of sales orders, including local and export sales, along with associated tags and customer information.
+                    </div>
+                    <div class="d-flex gap-3">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-info me-1">Local</span>
+                            <span class="text-muted small">344,325,215.23</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-success me-1">Export</span>
+                            <span class="text-muted small">344,325,215.23</span>
+                        </div>
+                    </div>
+                </div>
+            </div> 
         </div>
     </t>
 </templates>

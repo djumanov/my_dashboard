@@ -30,7 +30,7 @@ class L3Dashboard(models.Model):
         
         # Get projects with Local tag
         local_projects = self.env['project.project'].search([
-            ('tag_ids', 'in', [local_tag.id]),
+            ('  ', 'in', [local_tag.id]),
             ('active', '=', True)
         ])
         
@@ -140,51 +140,56 @@ class L3Dashboard(models.Model):
         # Get vendor bills for the project's analytic account
         domain = [
             ('move_type', '=', 'in_invoice'),
-            ('state', '!=', 'cancel'),
-            ('company_id', '=', self.env.company.id),
+            ('state', '=', 'posted'),
+            ('payment_state', '=', 'paid'),
+            ('company_id', '=', self.env.company.id), 
         ]
         vendor_bills = self.env['account.move'].search(domain)
         
+        processes_lines = set()
         # Process vendor bills
         for bill in vendor_bills:
             for line in bill.invoice_line_ids:
-                if line.analytic_distribution:
-                    try:
-                        distribution = line.analytic_distribution
-                        if not isinstance(distribution, dict):
-                            distribution = json.loads(distribution) if distribution else {}
-                        
-                        for account_id_str, percentage in distribution.items():
-                            account_id = int(account_id_str)
+                if line.id not in processes_lines:
+                    if line.analytic_distribution and line.name:
+                        try:
+                            distribution = line.analytic_distribution
+                            if not isinstance(distribution, dict):
+                                distribution = json.loads(distribution) if distribution else {}
                             
-                            if account_id == account.id:
-                                # Calculate the allocated amount based on percentage
-                                allocated_amount = line.price_subtotal
-                                vendor_invoice += allocated_amount
+                            for account_id_str, percentage in distribution.items():
+                                account_id = int(account_id_str)
                                 
-                                # Check if the bill is paid
-                                if bill.payment_state != 'not_paid':
-                                    payment_made += allocated_amount
+                                if account_id == account.id:
+                                    # Calculate the allocated amount based on percentage
+                                    allocated_amount = line.price_subtotal
+                                    vendor_invoice += allocated_amount
+                                    
+                                    # Check if the bill is paid
+                                    if bill.payment_state != 'not_paid':
+                                        payment_made += allocated_amount
 
-                                milestone_data = {
-                                    "id": line.id,
-                                    "description": line.name,
-                                    "date": bill.date.strftime('%Y-%m-%d') if bill.date else "",
-                                    "invoiced": 0.0,
-                                    "collected": 0.0,
-                                    "pending_collection": 0.0,
-                                    "outstanding_aging": 0,
-                                    "vendor_invoice": allocated_amount,
-                                    "payment_made": allocated_amount if bill.payment_state != 'not_paid' else 0.0,
-                                    "payment_to_be_made": allocated_amount if bill.payment_state != 'not_paid' else 0.0,
-                                }
+                                    milestone_data = {
+                                        "id": line.id,
+                                        "description": line.name,
+                                        "date": bill.invoice_date.strftime('%Y-%m-%d') if bill.date else "",
+                                        "invoiced": 0.0,
+                                        "collected": 0.0,
+                                        "pending_collection": 0.0,
+                                        "outstanding_aging": 0,
+                                        "vendor_invoice": allocated_amount,
+                                        "payment_made": allocated_amount if bill.payment_state != 'not_paid' else 0.0,
+                                        "payment_to_be_made": allocated_amount if bill.payment_state != 'not_paid' else 0.0,
+                                    }
+                                    if line.id not in processes_lines:
+                                        milestones.append(milestone_data)
+                                    processes_lines.add(line.id)
+                                    break
 
-                                milestones.append(milestone_data)
                                 break
-                    
-                    except Exception as e:
-                        _logger.error("Error processing analytic distribution for bill %s, line %s: %s", 
-                                    bill.id, line.id, str(e))
+                        except Exception as e:
+                            _logger.error("Error processing analytic distribution for bill %s, line %s: %s", 
+                                        bill.id, line.id, str(e))
 
         # Calculate payroll costs from timesheets
         payroll_cost = self._calculate_project_payroll(project)

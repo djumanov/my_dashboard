@@ -135,10 +135,10 @@ class L1Dashboard(models.Model):
                 'amount': self._format_amount(financial_data['revenue']),
                 'cost_of_revenue': self._format_amount(financial_data['cost_of_revenue']),
                 'gross_profit': self._format_amount(financial_data['gross_profit']),
-                'gross_profit_margin': f"{float_round(financial_data['gross_profit_margin'], 2)}%",
+                'gross_profit_margin': f"{self._format_amount(financial_data['gross_profit_margin'])}%",
                 'expenses': self._format_amount(financial_data['expenses']),
                 'net_profit': self._format_amount(financial_data['net_profit']),
-                'net_profit_margin': f"{float_round(financial_data['net_profit_margin'], 2)}%",
+                'net_profit_margin': f"{self._format_amount(financial_data['net_profit_margin'])}%",
                 'accounts_receivable': self._format_amount(financial_data['accounts_receivable']),
                 'accounts_payable': self._format_amount(financial_data['accounts_payable']),
                 'region_wise': {
@@ -215,6 +215,7 @@ class L1Dashboard(models.Model):
         
         sales_order_count = len(sales_orders)
         sales_amount = sum(order.amount_untaxed for order in sales_orders)
+        # sales_amount = sum(order.amount_total for order in sales_orders)
         sales_target = self._get_yearly_sales_target()  # Ensure this returns a valid value
         
         target_achievement = (sales_amount / sales_target) * 100 if sales_target else 0
@@ -230,64 +231,80 @@ class L1Dashboard(models.Model):
 
         local_sales_amount = export_sales_amount = 0.0
 
+        # Get company currency
+        company_currency = self.env.company.currency_id
+
         
         for sales_order in sales_orders:
-            for local_project in local_projects:
-                if local_project in sales_order.project_ids:
-                    local_sales_amount += sales_order.amount_untaxed
-                    break
-                else:
-                    order_lines = sales_order.order_line
-                    found = False
-                    for line in order_lines:
-                        if line.analytic_distribution:
-                            try:
-                                distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
-                                    else eval(line.analytic_distribution)
+            sale_currency = sales_order.currency_id
+            sale_date = sales_order.date_order or sales_order.create_date
+            if sales_order.project_ids:
+                if sales_order.project_ids[0] in local_projects:
+                    amount_in_company_currency = sale_currency._convert(
+                        sales_order.amount_untaxed,
+                        company_currency,
+                        self.env.company,
+                        sale_date
+                    )
+                    local_sales_amount += amount_in_company_currency
+            else:
+                order_lines = sales_order.order_line
+                for line in order_lines:
+                    if line.analytic_distribution:
+                        try:
+                            distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
+                                else eval(line.analytic_distribution)
+                            
+                            for account_id, percentage in distribution.items():
+                                account_id = int(account_id)
                                 
-                                for account_id, percentage in distribution.items():
-                                    account_id = int(account_id)
-                                    
-                                    if account_id in local_analytic_account_ids:
-                                        local_sales_amount += line.price_subtotal
-                                        found = True
-                                        break
-                            except Exception as e:
-                                _logger.error(f"Error processing analytic distribution for order {sales_order.id}: {e}")
-                        else:
-                            break
-                    
-                    if found:
-                        break
+                                if account_id in local_analytic_account_ids:
+                                    amount_in_company_currency = sale_currency._convert(
+                                        line.price_subtotal,
+                                        company_currency,
+                                        self.env.company,
+                                        sale_date
+                                    )
+                                    local_sales_amount += amount_in_company_currency
+
+                        except Exception as e:
+                            _logger.error(f"Error processing analytic distribution for order {sales_order.id}: {e}")
+
 
         for sales_order in sales_orders:
-            for export_project in export_projects:
-                if export_project in sales_order.project_ids:
-                    export_sales_amount += sales_order.amount_untaxed
-                    break
-                else:
-                    order_lines = sales_order.order_line
-                    found = False
-                    for line in order_lines:
-                        if line.analytic_distribution:
-                            try:
-                                distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
-                                    else eval(line.analytic_distribution)
+            sale_currency = sales_order.currency_id
+            sale_date = sales_order.date_order or sales_order.create_date
+            if sales_order.project_ids:
+                if sales_order.project_ids[0] in export_projects:
+                    amount_in_company_currency = sale_currency._convert(
+                        sales_order.amount_untaxed,
+                        company_currency,
+                        self.env.company,
+                        sale_date
+                    )
+                    export_sales_amount += amount_in_company_currency
+            else:
+                order_lines = sales_order.order_line
+                for line in order_lines:
+                    if line.analytic_distribution:
+                        try:
+                            distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
+                                else eval(line.analytic_distribution)
+                            
+                            for account_id, percentage in distribution.items():
+                                account_id = int(account_id)
                                 
-                                for account_id, percentage in distribution.items():
-                                    account_id = int(account_id)
-                                    
-                                    if account_id in export_analytic_account_ids:
-                                        export_sales_amount += line.price_subtotal
-                                        found = True
-                                        break
-                            except Exception as e:
-                                _logger.error(f"Error processing analytic distribution for order {sales_order.id}: {e}")
-                        else:
-                            break
-                    
-                    if found:
-                        break
+                                if account_id in export_analytic_account_ids:
+                                    amount_in_company_currency = sale_currency._convert(
+                                        line.price_subtotal,
+                                        company_currency,
+                                        self.env.company,
+                                        sale_date
+                                    )
+                                    export_sales_amount += amount_in_company_currency
+
+                        except Exception as e:
+                            _logger.error(f"Error processing analytic distribution for order {sales_order.id}: {e}")
 
         return {
             'sales_order_count': sales_order_count,
@@ -654,16 +671,22 @@ class L1Dashboard(models.Model):
         Returns:
             dict: Dictionary containing local and export revenue
         """
+        # Find project tags
         local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
         export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
 
+        if not local_tag or not export_tag:
+            return {'local_revenue': 0.0, 'export_revenue': 0.0}
+
+        # Find projects with respective tags
         local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])])
         export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])])
 
+        # Get analytic account IDs
         local_analytic_account_ids = local_projects.mapped('analytic_account_id').ids
         export_analytic_account_ids = export_projects.mapped('analytic_account_id').ids
         
-        # Get posted customer invoices in the date range related to these sale orders
+        # Get posted customer invoices in the date range
         invoice_domain = [
             ('invoice_date', '>=', start_date),
             ('invoice_date', '<=', end_date),
@@ -672,33 +695,44 @@ class L1Dashboard(models.Model):
             ('company_id', '=', self.company_id.id),
         ]
         customer_invoices = self.env['account.move'].search(invoice_domain)
-        
-        # Calculate revenue without tax
-        total_local_revenue = total_export_revenue = 0.0
+                
+        # Initialize revenue counters
+        total_local_revenue = 0.0
+        total_export_revenue = 0.0
 
         for invoice in customer_invoices:
+            found = False
+            
             for line in invoice.invoice_line_ids:
+                # Skip lines with zero or negative amounts
+                if line.price_subtotal <= 0:
+                    continue
+                    
                 if line.analytic_distribution:
                     try:
                         distribution = line.analytic_distribution
-                        if not isinstance(distribution, dict):
-                            distribution = json.loads(distribution) if distribution else {}
+                        if isinstance(distribution, str):
+                            distribution = json.loads(distribution)
+                        elif not isinstance(distribution, dict):
+                            continue
                         
                         for account_id_str, percentage in distribution.items():
                             account_id = int(account_id_str)
                             
                             if account_id in local_analytic_account_ids:
-                                # Calculate the allocated amount based on percentage
-                                total_local_revenue += line.price_subtotal
-                                break
+                                total_local_revenue += invoice.amount_untaxed_signed
+                                found = True
                                 
                             if account_id in export_analytic_account_ids:
-                                total_export_revenue += line.price_subtotal
-                                break
+                                total_export_revenue += invoice.amount_untaxed_signed
+                                found = True
 
                     except Exception as e:
                         _logger.error("Error processing analytic distribution for invoice %s, line %s: %s", 
                                     invoice.id, line.id, str(e))
+                
+                if found:
+                    break
         
         return {
             'local_revenue': total_local_revenue,
@@ -727,6 +761,9 @@ class L1Dashboard(models.Model):
         total_local_expense = 0.0
         total_export_expense = 0.0
 
+        # Get company currency
+        company_currency = self.env.company.currency_id
+
         # Get confirmed vendor bills within the date range
         domain = [
             ('move_type', '=', 'in_invoice'),
@@ -738,6 +775,10 @@ class L1Dashboard(models.Model):
         vendor_bills = self.env['account.move'].search(domain)
         
         for bill in vendor_bills:
+            # Get bill currency
+            bill_currency = bill.currency_id
+            bill_date = bill.invoice_date or bill.date
+
             for line in bill.line_ids:
                 # Ensure analytic distribution exists and is processed correctly
                 if line.analytic_distribution:
@@ -751,11 +792,19 @@ class L1Dashboard(models.Model):
                         for account_id, percentage in distribution.items():
                             account_id = int(account_id)  # Ensure integer
 
+                            # Convert line amount to company currency
+                            amount_in_company_currency = bill_currency._convert(
+                                line.price_subtotal,
+                                company_currency,
+                                self.env.company,
+                                bill_date
+                            )
+
                             # Check if the account is in local or export project accounts
                             if account_id in local_analytic_account_ids:
-                                total_local_expense += line.price_subtotal
+                                total_local_expense += amount_in_company_currency
                             if account_id in export_analytic_account_ids:
-                                total_export_expense += line.price_subtotal                      
+                                total_export_expense += amount_in_company_currency                     
                             
                             # # Calculate proportional expense based on distribution percentage
                             # proportional_expense = line.price_subtotal * (percentage / 100)
@@ -782,102 +831,139 @@ class L1Dashboard(models.Model):
         }
 
     def _get_cash_flow_data(self, start_date, end_date):
-        """Get cash flow data for the period, filtered by customer invoices and projects."""
-        inflows = outflows = local_inflow = export_inflow = local_outflow = export_outflow = 0.0
+        """
+        Get cash flow data for the period, filtered by customer/vendor payments
+        and categorized by Local and Export projects based on analytic accounts.
+        All amounts are converted to the company currency.
         
-        local_tag_id = self.env['project.tags'].search([('name', '=', 'Local')], limit=1).id
-        export_tag_id = self.env['project.tags'].search([('name', '=', 'Export')], limit=1).id
-
+        Args:
+            start_date: Start date of the period
+            end_date: End date of the period
+            
+        Returns:
+            dict: Cash flow data categorized by local and export in company currency
+        """
+        # Initialize result values
+        result = {
+            'local_inflow': 0.0,
+            'export_inflow': 0.0,
+            'local_outflow': 0.0,
+            'export_outflow': 0.0,
+            'inflows': 0.0,
+            'outflows': 0.0,
+            'net_cash_flow': 0.0
+        }
+        
+        # Get company currency
+        company_currency = self.env.company.currency_id
+        
+        # Get project tags
+        local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
+        export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
+        
+        # Get projects by tags
+        local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])])
+        export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])])
+        
+        # Get analytic accounts
+        local_analytic_account_ids = local_projects.mapped('analytic_account_id').ids
+        export_analytic_account_ids = export_projects.mapped('analytic_account_id').ids
+        
+        # INFLOW: Customer Payments
         customer_payments = self.env['account.payment'].search([
             ('payment_type', '=', 'inbound'),
             ('state', '=', 'posted'),
             ('date', '>=', start_date),
-            ('date', '<=', end_date),
-            ('company_id', '=', self.company_id.id),
+            ('date', '<=', end_date)
         ])
-
+        
         for payment in customer_payments:
-            # Try different methods to get related invoices
-            invoices = (
-                payment.reconciled_invoice_ids or  # Try reconciled invoices first
-                payment.invoice_line_ids.move_id or  # Alternative method
-                self.env['account.move'].search([('payment_id', '=', payment.id)])  # Fallback search
-            )
-
+            # Get related invoice
+            invoices = payment.reconciled_invoice_ids
+            
             for invoice in invoices:
-                # Try multiple methods to find the sale order
-                sale_order = False
+                # Get invoice currency
+                invoice_currency = invoice.currency_id
+                invoice_date = invoice.invoice_date or invoice.date
                 
-                # Method 1: Try direct sale_id if it exists
-                if hasattr(invoice, 'sale_id'):
-                    sale_order = invoice.sale_id
-                
-                # Method 2: Search using invoice reference
-                if not sale_order and invoice.ref:
-                    sale_order = self.env['sale.order'].search([('name', '=', invoice.ref)], limit=1)
-                
-                # Method 3: Search using invoice name
-                if not sale_order and invoice.name:
-                    sale_order = self.env['sale.order'].search([('name', '=', invoice.name)], limit=1)
+                for line in invoice.invoice_line_ids:
+                    if line.analytic_distribution:
+                        try:
+                            distribution = line.analytic_distribution
+                            if not isinstance(distribution, dict):
+                                distribution = json.loads(distribution) if distribution else {}
+                            
+                            for account_id_str, percentage in distribution.items():
+                                account_id = int(account_id_str)
+                                
+                                # Convert line amount to company currency
+                                amount_in_company_currency = invoice_currency._convert(
+                                    line.price_subtotal,
+                                    company_currency,
+                                    self.env.company,
+                                    invoice_date
+                                )
+                                
+                                if account_id in local_analytic_account_ids:
+                                    result['local_inflow'] += amount_in_company_currency
+                                    break
+                                elif account_id in export_analytic_account_ids:
+                                    result['export_inflow'] += amount_in_company_currency
+                                    break
 
-                if sale_order:
-                    for project in sale_order.project_ids:
-                        if local_tag_id in project.tag_ids.ids:
-                            local_inflow += payment.amount
-                            break
-                        elif export_tag_id in project.tag_ids.ids:
-                            export_inflow += payment.amount
-                            break
-
-        # Outbound Payments (Vendor Payments)
+                        except Exception as e:
+                            _logger.error("Error processing analytic distribution for invoice %s, line %s: %s", 
+                                        invoice.id, line.id, str(e))
+            
+        # OUTFLOW: Vendor Payments
         vendor_payments = self.env['account.payment'].search([
             ('payment_type', '=', 'outbound'),
             ('state', '=', 'posted'),
             ('date', '>=', start_date),
-            ('date', '<=', end_date),
-            ('company_id', '=', self.company_id.id),
+            ('date', '<=', end_date)
         ])
-
-        local_project_ids = self.env['project.project'].search([('tag_ids', 'in', [local_tag_id])])
-        export_project_ids = self.env['project.project'].search([('tag_ids', 'in', [export_tag_id])])
-        local_analytic_account_ids = local_project_ids.mapped('analytic_account_id').ids
-        export_analytic_account_ids = export_project_ids.mapped('analytic_account_id').ids
-
-        # Process Outbound Payments
+        
         for payment in vendor_payments:
-            if not payment.reconciled_bill_ids:
-                continue
-            # Try different methods to get related bills
-            try:
-                bill = payment.reconciled_bill_ids or payment.bill_line_ids.move_id
-            except Exception as e:
-                print(f"Error retrieving reconciled bill for payment {payment.id}: {e}")
-                bill = False
-            if bill:
-                for line in bill.line_ids:
+            # Get related bill
+            bills = payment.reconciled_bill_ids
+
+            for bill in bills:
+                # Get bill currency
+                bill_currency = bill.currency_id
+                bill_date = bill.invoice_date or bill.date
+                
+                for line in bill.invoice_line_ids:
                     if line.analytic_distribution:
                         try:
-                            distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
-                                else eval(line.analytic_distribution)
+                            distribution = line.analytic_distribution
+                            if not isinstance(distribution, dict):
+                                distribution = json.loads(distribution) if distribution else {}
                             
-                            for account_id, percentage in distribution.items():
-                                account_id = int(account_id)
+                            for account_id_str, percentage in distribution.items():
+                                account_id = int(account_id_str)
                                 
-                                # Check if the account is in local or export project accounts
+                                # Convert line amount to company currency
+                                amount_in_company_currency = bill_currency._convert(
+                                    line.price_subtotal,
+                                    company_currency,
+                                    self.env.company,
+                                    bill_date
+                                )
+                                
                                 if account_id in local_analytic_account_ids:
-                                    local_outflow += payment.amount
+                                    result['local_outflow'] += amount_in_company_currency
                                     break
-                                if account_id in export_analytic_account_ids:
-                                    export_outflow += payment.amount
+                                elif account_id in export_analytic_account_ids:
+                                    result['export_outflow'] += amount_in_company_currency
                                     break
+                                                    
                         except Exception as e:
-                            print(f"Error processing analytic distribution for bill {bill.id}, line {line.id}: {e}")
-
-        return {
-            'inflows': inflows,
-            'outflows': outflows,
-            'local_inflow': local_inflow,
-            'export_inflow': export_inflow,
-            'local_outflow': local_outflow,
-            'export_outflow': export_outflow,
-        }
+                            _logger.error("Error processing analytic distribution for bill %s, line %s: %s", 
+                                        bill.id, line.id, str(e))
+            
+        # Calculate totals
+        result['inflows'] = result['local_inflow'] + result['export_inflow']
+        result['outflows'] = result['local_outflow'] + result['export_outflow']
+        result['net_cash_flow'] = result['inflows'] - result['outflows']
+        
+        return result

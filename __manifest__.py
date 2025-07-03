@@ -27,6 +27,7 @@
         'views/l3_dashboard.xml',
         'views/l4_dashboard.xml',
         'views/sale_target.xml',
+        'views/reports.xml',
         'views/menu.xml',
     ],
     'assets': {

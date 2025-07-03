@@ -2,27 +2,22 @@
 <odoo>
     <!-- Main Menu -->
     <menuitem id="menu_l1_dashboard_root"
-              name="L1 Dashboard"
+              name="DrukSmart Dashboard"
               web_icon="l1_dashboard,static/description/icon.png"
-              sequence="90"/>
-              
-    <!-- Dashboard Settings Menu -->
-    <menuitem id="menu_l1_dashboard_settings"
-              name="Dashboard Settings"
-              parent="menu_l1_dashboard_root"
               action="action_l1_dashboard"
-              sequence="1"/>
+              sequence="90"/>
 
     <!-- Sale Target Menu -->
     <menuitem id="menu_l1_sale_target"
               name="Sales Targets"
               parent="menu_l1_dashboard_root"
               action="action_sale_target"
+              groups="base.group_system"
               sequence="10"/>
 
     <!-- L4 Menu Test -->
     <menuitem id="menu_l4_dashboard_test"
-              name="L4 Dashboard Test Menu"
+              name="Project Information"
               parent="menu_l1_dashboard_root"
               action="action_l4_dashboard"
               sequence="11"/>
