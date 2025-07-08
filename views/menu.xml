@@ -21,4 +21,11 @@
               parent="menu_l1_dashboard_root"
               action="action_l4_dashboard"
               sequence="11"/>
+
+    <!-- Dashboard Reports Menu -->
+    <menuitem id="druksmart_dashboard_reports_menu"
+              name="Reports"
+              parent="menu_l1_dashboard_root"
+              action="action_druksmart_dashboard_report"
+              sequence="12"/>
 </odoo>

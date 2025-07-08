@@ -24,7 +24,9 @@
                         
                         <!-- Left side (Dashboard Title) -->
                         <div class="col-md-6 col-sm-12 text-start">
-                            <h1 class="my-0" style="text-align: right;">Dashboard Reports</h1>
+                            <h1 class="my-0" style="text-align: right;">
+                                <field name="category"/>
+                            </h1>
                         </div>
 
                         <!-- Right side (Filters) -->
@@ -42,10 +44,10 @@
                             <span>Last update: <field name="last_update" readonly="1" class="d-inline"/></span>
                         </div>
                     </div>
-                    
+
                     <!-- Dashboard content -->
                     <field name="dashboard_data" readonly="1" nolabel='1' widget="druksmart_dashboard_reports"/>
-                    
+
                     <!-- Hidden fields -->
                     <field name="company_id" groups="base.group_multi_company" invisible="1"/>
                     <field name="currency_id" invisible="1"/>
@@ -53,7 +55,7 @@
             </form>
         </field>
     </record>
-    
+
     <!-- Dashboard Action -->
     <record id="action_druksmart_dashboard_report" model="ir.actions.act_window">
         <field name="name">Reports</field>

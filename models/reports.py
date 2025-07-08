@@ -13,6 +13,13 @@ class DashboardReports(models.Model):
     _description = 'DrukSmart Dashboard Reports'
 
     name = fields.Char(string='Dashboard Name', default='Reports')
+    category = fields.Selection([
+        ('sales', 'Sales'),
+        ('revenue', 'Revenue'),
+        ('expense', 'Expense'),
+        ('cashflow', 'Cashflow'),
+    ], string='Category', default='sales', required=True, help="Category of the dashboard report")
+    
     month = fields.Selection([
         ('1', 'January'), ('2', 'February'), ('3', 'March'), ('4', 'April'),
         ('5', 'May'), ('6', 'June'), ('7', 'July'), ('8', 'August'),
@@ -39,20 +46,22 @@ class DashboardReports(models.Model):
         default=lambda self: str(fields.Date.today().year)
     )
 
-    @api.depends('year', 'month', 'company_id', "quarter")
+    @api.depends('category', 'year', 'month', 'company_id', "quarter")
     def _compute_dashboard_data(self):
         for record in self:
             record.dashboard_data = json.dumps(record._get_dashboard_data())
             record.last_update = fields.Datetime.now()
 
     @api.model
-    def get_dashboard_data_json(self, year=None, month=None, quarter=None):
+    def get_dashboard_data_json(self, category, year=None, month=None, quarter=None):
         """API method to get dashboard data in JSON format"""
+
         if not year:
-            year = fields.Date.today().year
+            year = str(fields.Date.today().year)
             
         dashboard = self.search([
-            ('year', '=', year),
+            ('category', '=', category),
+            ('year', '=', str(year)),
             ('month', '=', month),
             ('quarter', '=', quarter),
             ('company_id', '=', self.env.company.id)
@@ -60,7 +69,8 @@ class DashboardReports(models.Model):
         
         if not dashboard:
             dashboard = self.create({
-                'year': year,
+                'category': category,
+                'year': str(year),
                 'month': month,
                 'quarter': quarter,
             })
@@ -72,41 +82,35 @@ class DashboardReports(models.Model):
         """Compute all dashboard data and return as a structured dictionary"""
         self.ensure_one()
         
+        category = self.category
         month = int(self.month) if self.month else 0
         year = int(self.year) if self.year else datetime.now().year
         quarter = self.quarter
         
+        # Calculate date ranges
         if quarter == 'Q1':
             start_date = fields.Date.to_string(datetime(year, 1, 1))
             end_date = fields.Date.to_string(datetime(year, 3, 31))
-            self.month = None
         elif quarter == 'Q2':
             start_date = fields.Date.to_string(datetime(year, 4, 1))
             end_date = fields.Date.to_string(datetime(year, 6, 30))
-            self.month = None
         elif quarter == 'Q3':
             start_date = fields.Date.to_string(datetime(year, 7, 1))
             end_date = fields.Date.to_string(datetime(year, 9, 30))
-            self.month = None
         elif quarter == 'Q4':
             start_date = fields.Date.to_string(datetime(year, 10, 1))
             end_date = fields.Date.to_string(datetime(year, 12, 31))
         elif month == 0:
             start_date = fields.Date.to_string(datetime(year, 1, 1))
             end_date = fields.Date.to_string(datetime(year, 12, 31))
-            self.quarter = None
         else:
             start_date = fields.Date.to_string(date_utils.start_of(datetime(year, month, 1), 'month'))
             end_date = fields.Date.to_string(date_utils.end_of(datetime(year, month, 1), 'month'))
-            self.quarter = None
-           
-        sales_data = self._get_sales_data(start_date, end_date)
-        revenue_data = self._get_revenue_data(start_date, end_date)
-        expense_data = self.get_expense_data(start_date, end_date)
-        cashflow_data = self.get_cashflow_data(start_date, end_date)
-        
-        return {
+
+        response = {
             'filters': {
+                'category': category,
+                'quarter': quarter,
                 'year': year,
                 'month': month,
                 'month_name': dict(self._fields['month'].selection).get(self.month),
@@ -115,12 +119,51 @@ class DashboardReports(models.Model):
                 'name': self.company_id.name,
                 'currency': self.currency_id.symbol,
                 'country': self.company_id.country_id.name,
-            },
-            'sales_data': sales_data,
-            'revenue_data': revenue_data,
-            'expense_data': expense_data,
-            'cashflow_data': cashflow_data,
+            }
         }
+        
+        # Initialize empty data structures for all categories
+        response['sales_data'] = {
+            'sales': [],
+            'total_sales_local_untaxed': 0,
+            'total_sales_export_untaxed': 0,
+        }
+        response['revenue_data'] = {
+            'revenues': [],
+            'total_local_revenue_untaxed': 0,
+            'total_export_revenue_untaxed': 0,
+        }
+        response['expense_data'] = {
+            'expenses': [],
+            'total_local_expense_untaxed': 0,
+            'total_export_expense_untaxed': 0,
+        }
+        response['cashflow_data'] = {
+            'cashflows': [],
+            'total_local_cashflow_inflow': 0,
+            'total_export_cashflow_inflow': 0,
+            'total_local_cashflow_outflow': 0,
+            'total_export_cashflow_outflow': 0,
+            'net_local_cashflow': 0,
+            'net_export_cashflow': 0,
+            'total_net_cashflow': 0,
+        }
+        
+        # Populate data based on category
+        if category == 'sales':
+            sales_data = self._get_sales_data(start_date, end_date)
+            response['sales_data'] = sales_data
+        elif category == 'revenue':
+            revenue_data = self._get_revenue_data(start_date, end_date)
+            response['revenue_data'] = revenue_data
+        elif category == 'expense':
+            expense_data = self.get_expense_data(start_date, end_date)
+            response['expense_data'] = expense_data
+        elif category == 'cashflow':
+            cashflow_data = self.get_cashflow_data(start_date, end_date)
+            response['cashflow_data'] = cashflow_data
+
+        return response
     
     def _format_amount(self, amount):
         """Format amount to match the dashboard display format"""
