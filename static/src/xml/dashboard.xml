@@ -552,6 +552,9 @@
                                     <th class="border-end fw-bold">
                                         Untaxed Amount
                                     </th>
+                                    <th class="border-end fw-bold">
+                                        Converted Amount
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -587,6 +590,9 @@
                                         </td>
                                         <td class="border-end text-end">
                                             <t t-esc="row.untaxed_amount" />
+                                        </td>
+                                        <td class="border-end text-end">
+                                            <t t-esc="row.converted_amount" />
                                         </td>
                                     </tr>
                                 </t>

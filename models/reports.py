@@ -218,6 +218,19 @@ class DashboardReports(models.Model):
                 else:
                     local_export = "Other"  # Project exists but not tagged as Local/Export
                 
+                if self.company_id.currency_id != sale_order.currency_id:
+                    converted_amount = sale_order.currency_id._convert(
+                        untaxed_amount,
+                        self.company_id.currency_id,
+                        self.company_id,
+                        sale_order.date_order or fields.Date.today()
+                    )
+                else:
+                    converted_amount = untaxed_amount
+
+                comapany_currancy_icon = self.company_id.currency_id.symbol or ''
+                sale_currancy_icon = sale_order.currency_id.symbol or ''
+
                 sales_data.append({
                     "sale_id": sale_id_counter,
                     "date": sale_order.date_order.strftime('%Y-%m-%d'),
@@ -226,14 +239,15 @@ class DashboardReports(models.Model):
                     "tags": tags,
                     "customer": sale_order.partner_id.name,
                     "sale_person": sale_order.user_id.name,
-                    "untaxed_amount": self._format_amount(untaxed_amount),
+                    "untaxed_amount": f"{sale_currancy_icon}{self._format_amount(total_untaxed_amount)}",
+                    "converted_amount": f"{comapany_currancy_icon}{self._format_amount(converted_amount)}",
                 })
                 sale_id_counter += 1
                 # Update totals
                 if local_export == "Local":
-                    total_local_untaxed += untaxed_amount
+                    total_local_untaxed += converted_amount
                 elif local_export == "Export":
-                    total_export_untaxed += untaxed_amount
+                    total_export_untaxed += converted_amount
             
             # Case 2: Sale order has no project_ids - check analytic distribution
             else:
@@ -297,6 +311,20 @@ class DashboardReports(models.Model):
                 if region == "Unclassified":
                     # Skip unclassified sales
                     continue
+                
+                if self.company_id.currency_id != sale_order.currency_id:
+                    converted_amount = sale_order.currency_id._convert(
+                        total_untaxed_amount,
+                        self.company_id.currency_id,
+                        self.company_id,
+                        sale_order.date_order or fields.Date.today()
+                    )
+                else:
+                    converted_amount = total_untaxed_amount
+
+                comapany_currancy_icon = self.company_id.currency_id.symbol or ''
+                sale_currancy_icon = sale_order.currency_id.symbol or ''
+
                 sales_data.append({
                     "sale_id": sale_id_counter,
                     "date": sale_order.date_order.strftime('%Y-%m-%d'),
@@ -305,19 +333,22 @@ class DashboardReports(models.Model):
                     "tags": tags,
                     "customer": sale_order.partner_id.name,
                     "sale_person": sale_order.user_id.name,
-                    "untaxed_amount": self._format_amount(total_untaxed_amount),
+                    "untaxed_amount": f"{sale_currancy_icon}{self._format_amount(total_untaxed_amount)}",
+                    "converted_amount": f"{comapany_currancy_icon}{self._format_amount(converted_amount)}",
                 })
                 sale_id_counter += 1
                 # Update totals
                 if region == "Local":
-                    total_local_untaxed += total_untaxed_amount
+                    total_local_untaxed += converted_amount
                 elif region == "Export":
-                    total_export_untaxed += total_untaxed_amount
-        
+                    total_export_untaxed += converted_amount
+
+        company_currancy_icon = self.company_id.currency_id.symbol or ''
+
         return {
             'sales': sales_data,
-            'total_sales_local_untaxed': self._format_amount(total_local_untaxed),
-            'total_sales_export_untaxed': self._format_amount(total_export_untaxed)
+            'total_sales_local_untaxed': f"{company_currancy_icon}{self._format_amount(total_local_untaxed)}",
+            'total_sales_export_untaxed': f"{company_currancy_icon}{self._format_amount(total_export_untaxed)}"
         }
     
     def _get_revenue_data(self, start_date, end_date):
