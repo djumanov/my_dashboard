@@ -654,11 +654,21 @@ class DashboardReports(models.Model):
 
     def get_cashflow_data(self, start_date, end_date):
         """Get cashflow data for the dashboard"""
+        
+        # Debug logging
+        _logger.info("=== CASHFLOW DEBUG START ===")
+        _logger.info(f"Date range: {start_date} to {end_date}")
+        _logger.info(f"Company ID: {self.company_id.id}")
+        
         # Find project tags
         local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
         export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
+        
+        _logger.info(f"Local tag found: {bool(local_tag)} - ID: {local_tag.id if local_tag else None}")
+        _logger.info(f"Export tag found: {bool(export_tag)} - ID: {export_tag.id if export_tag else None}")
 
         if not local_tag or not export_tag:
+            _logger.warning("Missing required project tags (Local/Export)")
             return {
                 'cashflows': [],
                 'total_local_cashflow_inflow': self._format_amount(0.0),
@@ -666,16 +676,36 @@ class DashboardReports(models.Model):
                 'total_local_cashflow_outflow': self._format_amount(0.0),
                 'total_export_cashflow_outflow': self._format_amount(0.0),
                 'net_local_cashflow': self._format_amount(0.0),
-                'net_export_cashflow': self._format_amount(0.0)
+                'net_export_cashflow': self._format_amount(0.0),
+                'total_net_cashflow': self._format_amount(0.0)
             }
 
         # Find projects with respective tags
         local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])])
         export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])])
+        
+        _logger.info(f"Local projects found: {len(local_projects)} - IDs: {local_projects.ids}")
+        _logger.info(f"Export projects found: {len(export_projects)} - IDs: {export_projects.ids}")
 
         # Get analytic account IDs
         local_analytic_account_ids = local_projects.mapped('analytic_account_id').ids
         export_analytic_account_ids = export_projects.mapped('analytic_account_id').ids
+        
+        _logger.info(f"Local analytic account IDs: {local_analytic_account_ids}")
+        _logger.info(f"Export analytic account IDs: {export_analytic_account_ids}")
+
+        if not local_analytic_account_ids and not export_analytic_account_ids:
+            _logger.warning("No analytic accounts found for projects")
+            return {
+                'cashflows': [],
+                'total_local_cashflow_inflow': self._format_amount(0.0),
+                'total_export_cashflow_inflow': self._format_amount(0.0),
+                'total_local_cashflow_outflow': self._format_amount(0.0),
+                'total_export_cashflow_outflow': self._format_amount(0.0),
+                'net_local_cashflow': self._format_amount(0.0),
+                'net_export_cashflow': self._format_amount(0.0),
+                'total_net_cashflow': self._format_amount(0.0)
+            }
 
         cashflows = []
         total_local_inflow = 0.0
@@ -684,298 +714,224 @@ class DashboardReports(models.Model):
         total_export_outflow = 0.0
         
         cashflow_id_counter = 1
+        company_currency = self.env.company.currency_id
 
-        # Get payment records (both inbound and outbound)
-        payment_domain = [
+        # INFLOW: Customer Payments
+        customer_payments = self.env['account.payment'].search([
+            ('payment_type', '=', 'inbound'),
+            ('state', '=', 'posted'),
             ('date', '>=', start_date),
             ('date', '<=', end_date),
+            ('company_id', '=', self.company_id.id)
+        ], order='date desc')
+        
+        _logger.info(f"Customer payments found: {len(customer_payments)}")
+
+        for payment in customer_payments:
+            _logger.info(f"Processing customer payment: {payment.id} - {payment.name}")
+            
+            # Fix: Use proper reconciliation method
+            reconciled_invoices = payment.reconciled_invoice_ids
+            if not reconciled_invoices:
+                # Alternative: try to find invoices through move lines
+                reconciled_invoices = payment.move_id.line_ids.filtered(
+                    lambda l: l.account_id.account_type == 'asset_receivable'
+                ).mapped('matched_credit_ids.credit_move_id.move_id').filtered(
+                    lambda m: m.move_type in ('out_invoice', 'out_refund')
+                )
+            
+            _logger.info(f"Reconciled invoices for payment {payment.id}: {len(reconciled_invoices)}")
+            
+            for invoice in reconciled_invoices:
+                _logger.info(f"Processing invoice: {invoice.id} - {invoice.name}")
+                
+                invoice_currency = invoice.currency_id
+                invoice_date = invoice.invoice_date or invoice.date
+                
+                for line in invoice.invoice_line_ids:
+                    if line.analytic_distribution:
+                        try:
+                            distribution = line.analytic_distribution
+                            if isinstance(distribution, str):
+                                distribution = json.loads(distribution) if distribution else {}
+                            elif not isinstance(distribution, dict):
+                                distribution = {}
+                            
+                            _logger.info(f"Processing line {line.id} with distribution: {distribution}")
+                            
+                            for account_id_str, percentage in distribution.items():
+                                account_id = int(account_id_str)
+                                
+                                # Calculate proportional amount based on percentage
+                                percentage_decimal = float(percentage) / 100.0 if percentage > 1 else float(percentage)
+                                line_amount = line.price_subtotal * percentage_decimal
+                                
+                                # Convert to company currency
+                                amount_in_company_currency = invoice_currency._convert(
+                                    line_amount,
+                                    company_currency,
+                                    self.env.company,
+                                    invoice_date
+                                )
+                                
+                                region = ""
+                                project_name = ""
+                                project = None
+                                
+                                if account_id in local_analytic_account_ids:
+                                    region = "Local"
+                                    total_local_inflow += amount_in_company_currency
+                                    project = local_projects.filtered(lambda p: p.analytic_account_id.id == account_id)
+                                    if project:
+                                        project_name = project[0].name
+                                elif account_id in export_analytic_account_ids:
+                                    region = "Export"
+                                    total_export_inflow += amount_in_company_currency
+                                    project = export_projects.filtered(lambda p: p.analytic_account_id.id == account_id)
+                                    if project:
+                                        project_name = project[0].name
+                                
+                                if region:
+                                    # Get project tags
+                                    project_tags = ""
+                                    if project:
+                                        project_tags = ", ".join(project.tag_ids.mapped('name'))
+                                    
+                                    cashflow_entry = {
+                                        "cashflow_id": cashflow_id_counter,
+                                        "date": payment.date.strftime('%Y-%m-%d') if payment.date else '',
+                                        "inflow_outflow": "Inflow",
+                                        "project": project_name,
+                                        "local_export": region,
+                                        "tags": project_tags,
+                                        "source_document": invoice.name or '',
+                                        "payment_amount": self._format_amount(amount_in_company_currency),
+                                        "payment_status": payment.state or '',
+                                    }
+                                    cashflows.append(cashflow_entry)
+                                    cashflow_id_counter += 1
+                                    
+                                    _logger.info(f"Added cashflow entry: {cashflow_entry}")
+                        
+                        except Exception as e:
+                            _logger.error("Error processing analytic distribution for invoice %s, line %s: %s", 
+                                        invoice.id, line.id, str(e))
+
+        # OUTFLOW: Vendor Payments
+        vendor_payments = self.env['account.payment'].search([
+            ('payment_type', '=', 'outbound'),
             ('state', '=', 'posted'),
-            ('company_id', '=', self.company_id.id),
-        ]
-        payments = self.env['account.payment'].search(payment_domain, order='date desc')
+            ('date', '>=', start_date),
+            ('date', '<=', end_date),
+            ('company_id', '=', self.company_id.id)
+        ], order='date desc')
+        
+        _logger.info(f"Vendor payments found: {len(vendor_payments)}")
 
-        for payment in payments:
-            regions_found = set()
-            all_tags = set()
-            payment_amount = 0.0
-            has_analytic_distribution = False
+        for payment in vendor_payments:
+            _logger.info(f"Processing vendor payment: {payment.id} - {payment.name}")
             
-            # Determine payment type
-            if payment.payment_type == 'inbound':
-                flow_type = 'Inflow'
-                partner_type = 'Customer'
-            else:
-                flow_type = 'Outflow'
-                partner_type = 'Vendor'
+            # Fix: Use proper reconciliation method
+            reconciled_bills = payment.reconciled_bill_ids
+            if not reconciled_bills:
+                # Alternative: try to find bills through move lines
+                reconciled_bills = payment.move_id.line_ids.filtered(
+                    lambda l: l.account_id.account_type == 'liability_payable'
+                ).mapped('matched_debit_ids.debit_move_id.move_id').filtered(
+                    lambda m: m.move_type in ('in_invoice', 'in_refund')
+                )
+            
+            _logger.info(f"Reconciled bills for payment {payment.id}: {len(reconciled_bills)}")
 
-            # Check if payment has reconciled moves with analytic distribution
-            reconciled_moves = payment.reconciled_invoice_ids
-            
-            if reconciled_moves:
-                # Process reconciled invoices/bills
-                for move in reconciled_moves:
-                    for line in move.invoice_line_ids:
-                        if line.analytic_distribution:
-                            has_analytic_distribution = True
-                            try:
-                                distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
-                                    else eval(line.analytic_distribution)
+            for bill in reconciled_bills:
+                _logger.info(f"Processing bill: {bill.id} - {bill.name}")
+                
+                bill_currency = bill.currency_id
+                bill_date = bill.invoice_date or bill.date
+                
+                for line in bill.invoice_line_ids:
+                    if line.analytic_distribution:
+                        try:
+                            distribution = line.analytic_distribution
+                            if isinstance(distribution, str):
+                                distribution = json.loads(distribution) if distribution else {}
+                            elif not isinstance(distribution, dict):
+                                distribution = {}
+                            
+                            _logger.info(f"Processing line {line.id} with distribution: {distribution}")
+                            
+                            for account_id_str, percentage in distribution.items():
+                                account_id = int(account_id_str)
                                 
-                                for account_id, percentage in distribution.items():
-                                    account_id = int(account_id)
-                                    
-                                    if account_id in local_analytic_account_ids:
-                                        regions_found.add("Local")
-                                        project = self.env['project.project'].search([
-                                            ('analytic_account_id', '=', account_id)
-                                        ], limit=1)
-                                        if project and project.tag_ids:
-                                            all_tags.update(project.tag_ids.mapped('name'))
-                                    elif account_id in export_analytic_account_ids:
-                                        regions_found.add("Export")
-                                        project = self.env['project.project'].search([
-                                            ('analytic_account_id', '=', account_id)
-                                        ], limit=1)
-                                        if project and project.tag_ids:
-                                            all_tags.update(project.tag_ids.mapped('name'))
-                                    
-                                    # Calculate proportional payment amount
-                                    line_amount = line.price_subtotal * (percentage / 100)
-                                    # Get the proportion of this line's amount in the total invoice
-                                    if move.amount_untaxed > 0:
-                                        line_proportion = line_amount / move.amount_untaxed
-                                        payment_amount += payment.amount * line_proportion
-                            
-                            except Exception as e:
-                                _logger.error(f"Error processing analytic distribution for payment {payment.id}: {e}")
-            
-            else:
-                # If no reconciled moves, check if payment itself has analytic distribution
-                # (This might be the case for manual payments or advance payments)
-                if hasattr(payment, 'analytic_distribution') and payment.analytic_distribution:
-                    has_analytic_distribution = True
-                    try:
-                        distribution = payment.analytic_distribution if isinstance(payment.analytic_distribution, dict) \
-                            else eval(payment.analytic_distribution)
-                        
-                        for account_id, percentage in distribution.items():
-                            account_id = int(account_id)
-                            
-                            if account_id in local_analytic_account_ids:
-                                regions_found.add("Local")
-                                project = self.env['project.project'].search([
-                                    ('analytic_account_id', '=', account_id)
-                                ], limit=1)
-                                if project and project.tag_ids:
-                                    all_tags.update(project.tag_ids.mapped('name'))
-                            elif account_id in export_analytic_account_ids:
-                                regions_found.add("Export")
-                                project = self.env['project.project'].search([
-                                    ('analytic_account_id', '=', account_id)
-                                ], limit=1)
-                                if project and project.tag_ids:
-                                    all_tags.update(project.tag_ids.mapped('name'))
-                            
-                            payment_amount += payment.amount * (percentage / 100)
-                    
-                    except Exception as e:
-                        _logger.error(f"Error processing payment analytic distribution for payment {payment.id}: {e}")
-
-            # Determine final region and tags
-            if len(regions_found) == 1:
-                region = list(regions_found)[0]
-            elif len(regions_found) > 1:
-                region = "Mixed"
-            elif has_analytic_distribution:
-                region = "Other"
-            else:
-                region = "Unclassified"
-
-            tags = ", ".join(sorted(all_tags))
-            
-            # Use calculated amount or fallback to payment amount
-            if payment_amount == 0.0:
-                payment_amount = payment.amount
-
-            # Skip unclassified payments
-            if region == "Unclassified":
-                continue
-
-            # Get reference document
-            reference_doc = ""
-            if payment.reconciled_invoice_ids:
-                reference_doc = ", ".join(payment.reconciled_invoice_ids.mapped('name'))
-            elif payment.communication:
-                reference_doc = payment.communication
-
-            # Get project name from analytic account
-            project_name = ""
-            if regions_found:
-                # Find the first project that matches the region by checking analytic distribution
-                for move in reconciled_moves:
-                    for line in move.invoice_line_ids:
-                        if line.analytic_distribution:
-                            try:
-                                distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
-                                    else eval(line.analytic_distribution)
+                                # Calculate proportional amount based on percentage
+                                percentage_decimal = float(percentage) / 100.0 if percentage > 1 else float(percentage)
+                                line_amount = line.price_subtotal * percentage_decimal
                                 
-                                for account_id_str in distribution.keys():
-                                    account_id = int(account_id_str)
-                                    if region == "Local":
-                                        matching_project = local_projects.filtered(lambda p: p.analytic_account_id.id == account_id)
-                                        if matching_project:
-                                            project_name = matching_project[0].name
-                                            break
-                                    elif region == "Export":
-                                        matching_project = export_projects.filtered(lambda p: p.analytic_account_id.id == account_id)
-                                        if matching_project:
-                                            project_name = matching_project[0].name
-                                            break
-                            except Exception:
-                                continue
-                        if project_name:
-                            break
-                    if project_name:
-                        break
-
-            cashflows.append({
-                "cashflow_id": cashflow_id_counter,
-                "date": payment.date.strftime('%Y-%m-%d') if payment.date else '',
-                "inflow_outflow": flow_type,
-                "project": project_name,
-                "local_export": region,
-                "tags": tags,
-                "source_document": reference_doc,
-                "payment_amount": self._format_amount(payment_amount),
-                "payment_status": payment.state or '',
-            })
-            cashflow_id_counter += 1
-
-            # Update totals
-            if flow_type == 'Inflow':
-                if region == "Local":
-                    total_local_inflow += payment_amount
-                elif region == "Export":
-                    total_export_inflow += payment_amount
-            else:  # Outflow
-                if region == "Local":
-                    total_local_outflow += payment_amount
-                elif region == "Export":
-                    total_export_outflow += payment_amount
-
-        # Alternative approach: Get cash flows from account moves if payments don't have enough data
-        if not cashflows:
-            # Get account moves for cash/bank accounts
-            cash_bank_accounts = self.env['account.account'].search([
-                ('account_type', 'in', ['asset_cash', 'liability_current']),
-                ('company_id', '=', self.company_id.id)
-            ])
-            
-            move_line_domain = [
-                ('date', '>=', start_date),
-                ('date', '<=', end_date),
-                ('account_id', 'in', cash_bank_accounts.ids),
-                ('parent_state', '=', 'posted'),
-                ('company_id', '=', self.company_id.id),
-            ]
-            
-            cash_move_lines = self.env['account.move.line'].search(move_line_domain, order='date desc')
-            
-            for line in cash_move_lines:
-                regions_found = set()
-                all_tags = set()
-                line_amount = abs(line.debit - line.credit)
-                
-                if line.analytic_distribution:
-                    try:
-                        distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
-                            else eval(line.analytic_distribution)
+                                # Convert to company currency
+                                amount_in_company_currency = bill_currency._convert(
+                                    line_amount,
+                                    company_currency,
+                                    self.env.company,
+                                    bill_date
+                                )
+                                
+                                region = ""
+                                project_name = ""
+                                project = None
+                                
+                                if account_id in local_analytic_account_ids:
+                                    region = "Local"
+                                    total_local_outflow += amount_in_company_currency
+                                    project = local_projects.filtered(lambda p: p.analytic_account_id.id == account_id)
+                                    if project:
+                                        project_name = project[0].name
+                                elif account_id in export_analytic_account_ids:
+                                    region = "Export"
+                                    total_export_outflow += amount_in_company_currency
+                                    project = export_projects.filtered(lambda p: p.analytic_account_id.id == account_id)
+                                    if project:
+                                        project_name = project[0].name
+                                
+                                if region:
+                                    # Get project tags
+                                    project_tags = ""
+                                    if project:
+                                        project_tags = ", ".join(project.tag_ids.mapped('name'))
+                                    
+                                    cashflow_entry = {
+                                        "cashflow_id": cashflow_id_counter,
+                                        "date": payment.date.strftime('%Y-%m-%d') if payment.date else '',
+                                        "inflow_outflow": "Outflow",
+                                        "project": project_name,
+                                        "local_export": region,
+                                        "tags": project_tags,
+                                        "source_document": bill.name or '',
+                                        "payment_amount": self._format_amount(amount_in_company_currency),
+                                        "payment_status": payment.state or '',
+                                    }
+                                    cashflows.append(cashflow_entry)
+                                    cashflow_id_counter += 1
+                                    
+                                    _logger.info(f"Added cashflow entry: {cashflow_entry}")
                         
-                        for account_id, percentage in distribution.items():
-                            account_id = int(account_id)
-                            
-                            if account_id in local_analytic_account_ids:
-                                regions_found.add("Local")
-                                project = self.env['project.project'].search([
-                                    ('analytic_account_id', '=', account_id)
-                                ], limit=1)
-                                if project and project.tag_ids:
-                                    all_tags.update(project.tag_ids.mapped('name'))
-                            elif account_id in export_analytic_account_ids:
-                                regions_found.add("Export")
-                                project = self.env['project.project'].search([
-                                    ('analytic_account_id', '=', account_id)
-                                ], limit=1)
-                                if project and project.tag_ids:
-                                    all_tags.update(project.tag_ids.mapped('name'))
-                    
-                    except Exception as e:
-                        _logger.error(f"Error processing analytic distribution for move line {line.id}: {e}")
-                
-                if not regions_found:
-                    continue
-                    
-                region = list(regions_found)[0] if len(regions_found) == 1 else "Mixed"
-                tags = ", ".join(sorted(all_tags))
-                
-                # Determine flow type based on debit/credit
-                if line.debit > 0:
-                    flow_type = 'Inflow'
-                    partner_type = 'Customer'
-                else:
-                    flow_type = 'Outflow'
-                    partner_type = 'Vendor'
-                
-                # Get project name from analytic account
-                project_name = ""
-                if regions_found:
-                    if region == "Local" and local_projects:
-                        # Find project that matches the analytic account
-                        for account_id_str in distribution.keys():
-                            account_id = int(account_id_str)
-                            matching_project = local_projects.filtered(lambda p: p.analytic_account_id.id == account_id)
-                            if matching_project:
-                                project_name = matching_project[0].name
-                                break
-                    elif region == "Export" and export_projects:
-                        # Find project that matches the analytic account
-                        for account_id_str in distribution.keys():
-                            account_id = int(account_id_str)
-                            matching_project = export_projects.filtered(lambda p: p.analytic_account_id.id == account_id)
-                            if matching_project:
-                                project_name = matching_project[0].name
-                                break
-                
-                cashflows.append({
-                    "cashflow_id": cashflow_id_counter,
-                    "date": line.date.strftime('%Y-%m-%d') if line.date else '',
-                    "inflow_outflow": flow_type,
-                    "project": project_name,
-                    "local_export": region,
-                    "tags": tags,
-                    "source_document": line.ref or line.name or '',
-                    "payment_amount": self._format_amount(line_amount),
-                    "payment_status": line.move_id.state or '',
-                })
-                cashflow_id_counter += 1
-                
-                # Update totals
-                if flow_type == 'Inflow':
-                    if region == "Local":
-                        total_local_inflow += line_amount
-                    elif region == "Export":
-                        total_export_inflow += line_amount
-                else:  # Outflow
-                    if region == "Local":
-                        total_local_outflow += line_amount
-                    elif region == "Export":
-                        total_export_outflow += line_amount
+                        except Exception as e:
+                            _logger.error("Error processing analytic distribution for bill %s, line %s: %s", 
+                                        bill.id, line.id, str(e))
 
         # Calculate net cashflows
         net_local_cashflow = total_local_inflow - total_local_outflow
         net_export_cashflow = total_export_inflow - total_export_outflow
 
+        _logger.info(f"=== CASHFLOW SUMMARY ===")
+        _logger.info(f"Total cashflow entries: {len(cashflows)}")
+        _logger.info(f"Local inflow: {total_local_inflow}")
+        _logger.info(f"Local outflow: {total_local_outflow}")
+        _logger.info(f"Export inflow: {total_export_inflow}")
+        _logger.info(f"Export outflow: {total_export_outflow}")
+        _logger.info("=== CASHFLOW DEBUG END ===")
+
         return {
+            'count': cashflow_id_counter,
             'cashflows': cashflows,
             'total_local_cashflow_inflow': self._format_amount(total_local_inflow),
             'total_export_cashflow_inflow': self._format_amount(total_export_inflow),

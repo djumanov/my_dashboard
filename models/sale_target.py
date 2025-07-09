@@ -30,7 +30,7 @@ class SaleTarget(models.Model):
         default=lambda self: fields.Date.today().year,
         help='Year for which the sales target is set',
         tracking=True,
-        group_operator='max',  # Change from False to 'max'
+        group_operator='max',
         widget='integer'
     )
 
@@ -57,10 +57,11 @@ class SaleTarget(models.Model):
 
     def _compute_formatted_target_amount(self):
         """
-        Ensure target amount is displayed without formatting
+        Format target amount with thousand separators (xxx,xxx,xxx)
         """
         for record in self:
-            record.formatted_target_amount = f"{record.target_amount:.2f}"
+            # Format with thousand separators and 2 decimal places
+            record.formatted_target_amount = f"{record.target_amount:,.2f}"
     
     formatted_target_amount = fields.Char(
         string='Target Amount',
@@ -113,7 +114,7 @@ class SaleTarget(models.Model):
     @api.depends('year', 'target_amount', 'category', 'type')
     def _compute_display_name(self):
         """
-        Generate a readable display name for the sale target record.
+        Generate a readable display name for the sale target record with formatted amount.
         """
         for record in self:
             # Safely handle potential None or False values
@@ -122,7 +123,7 @@ class SaleTarget(models.Model):
             type_val = (record.type or '').upper()
             target_amount = record.target_amount or 0.0
 
-            # Construct display name with safe string formatting
+            # Construct display name with formatted amount (thousand separators)
             record.display_name = f"{year} ({category} - {type_val}) Target: {target_amount:,.2f}".strip()
     
     @api.constrains('year')
