@@ -685,57 +685,44 @@ class DashboardReports(models.Model):
 
     def get_cashflow_data(self, start_date, end_date):
         """Get cashflow data for the dashboard"""
-        
-        # Debug logging
-        _logger.info("=== CASHFLOW DEBUG START ===")
-        _logger.info(f"Date range: {start_date} to {end_date}")
-        _logger.info(f"Company ID: {self.company_id.id}")
-        
         # Find project tags
         local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
         export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
-        
-        _logger.info(f"Local tag found: {bool(local_tag)} - ID: {local_tag.id if local_tag else None}")
-        _logger.info(f"Export tag found: {bool(export_tag)} - ID: {export_tag.id if export_tag else None}")
+
+        company_currency = self.env.company.currency_id
+        comapny_currancy_icon = company_currency.symbol or ''
 
         if not local_tag or not export_tag:
-            _logger.warning("Missing required project tags (Local/Export)")
             return {
                 'cashflows': [],
-                'total_local_cashflow_inflow': self._format_amount(0.0),
-                'total_export_cashflow_inflow': self._format_amount(0.0),
-                'total_local_cashflow_outflow': self._format_amount(0.0),
-                'total_export_cashflow_outflow': self._format_amount(0.0),
-                'net_local_cashflow': self._format_amount(0.0),
-                'net_export_cashflow': self._format_amount(0.0),
-                'total_net_cashflow': self._format_amount(0.0)
+                'total_local_cashflow_inflow': f"{comapny_currancy_icon}{self._format_amount(0.0)}",
+                'total_export_cashflow_inflow': f"{comapny_currancy_icon}{self._format_amount(0.0)}",
+                'total_local_cashflow_outflow': f"{comapny_currancy_icon}{self._format_amount(0.0)}",
+                'total_export_cashflow_outflow': f"{comapny_currancy_icon}{self._format_amount(0.0)}",
+                'net_local_cashflow': f"{comapny_currancy_icon}{self._format_amount(0.0)}",
+                'net_export_cashflow': f"{comapny_currancy_icon}{self._format_amount(0.0)}",
+                'total_net_cashflow': f"{comapny_currancy_icon}{self._format_amount(0.0)}",
             }
 
         # Find projects with respective tags
         local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])])
         export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])])
-        
-        _logger.info(f"Local projects found: {len(local_projects)} - IDs: {local_projects.ids}")
-        _logger.info(f"Export projects found: {len(export_projects)} - IDs: {export_projects.ids}")
 
         # Get analytic account IDs
         local_analytic_account_ids = local_projects.mapped('analytic_account_id').ids
         export_analytic_account_ids = export_projects.mapped('analytic_account_id').ids
-        
-        _logger.info(f"Local analytic account IDs: {local_analytic_account_ids}")
-        _logger.info(f"Export analytic account IDs: {export_analytic_account_ids}")
 
         if not local_analytic_account_ids and not export_analytic_account_ids:
             _logger.warning("No analytic accounts found for projects")
             return {
                 'cashflows': [],
-                'total_local_cashflow_inflow': self._format_amount(0.0),
-                'total_export_cashflow_inflow': self._format_amount(0.0),
-                'total_local_cashflow_outflow': self._format_amount(0.0),
-                'total_export_cashflow_outflow': self._format_amount(0.0),
-                'net_local_cashflow': self._format_amount(0.0),
-                'net_export_cashflow': self._format_amount(0.0),
-                'total_net_cashflow': self._format_amount(0.0)
+                'total_local_cashflow_inflow': f"{comapny_currancy_icon}{self._format_amount(0.0)}",
+                'total_export_cashflow_inflow': f"{comapny_currancy_icon}{self._format_amount(0.0)}",
+                'total_local_cashflow_outflow': f"{comapny_currancy_icon}{self._format_amount(0.0)}",
+                'total_export_cashflow_outflow': f"{comapny_currancy_icon}{self._format_amount(0.0)}",
+                'net_local_cashflow': f"{comapny_currancy_icon}{self._format_amount(0.0)}",
+                'net_export_cashflow': f"{comapny_currancy_icon}{self._format_amount(0.0)}",
+                'total_net_cashflow': f"{comapny_currancy_icon}{self._format_amount(0.0)}",
             }
 
         cashflows = []
@@ -756,11 +743,7 @@ class DashboardReports(models.Model):
             ('company_id', '=', self.company_id.id)
         ], order='date desc')
         
-        _logger.info(f"Customer payments found: {len(customer_payments)}")
-
-        for payment in customer_payments:
-            _logger.info(f"Processing customer payment: {payment.id} - {payment.name}")
-            
+        for payment in customer_payments:            
             # Fix: Use proper reconciliation method
             reconciled_invoices = payment.reconciled_invoice_ids
             if not reconciled_invoices:
@@ -770,9 +753,7 @@ class DashboardReports(models.Model):
                 ).mapped('matched_credit_ids.credit_move_id.move_id').filtered(
                     lambda m: m.move_type in ('out_invoice', 'out_refund')
                 )
-            
-            _logger.info(f"Reconciled invoices for payment {payment.id}: {len(reconciled_invoices)}")
-            
+                        
             for invoice in reconciled_invoices:
                 _logger.info(f"Processing invoice: {invoice.id} - {invoice.name}")
                 
@@ -787,9 +768,7 @@ class DashboardReports(models.Model):
                                 distribution = json.loads(distribution) if distribution else {}
                             elif not isinstance(distribution, dict):
                                 distribution = {}
-                            
-                            _logger.info(f"Processing line {line.id} with distribution: {distribution}")
-                            
+                                                        
                             for account_id_str, percentage in distribution.items():
                                 account_id = int(account_id_str)
                                 
@@ -836,14 +815,12 @@ class DashboardReports(models.Model):
                                         "local_export": region,
                                         "tags": project_tags,
                                         "source_document": invoice.name or '',
-                                        "payment_amount": self._format_amount(amount_in_company_currency),
+                                        "payment_amount": f"{comapny_currancy_icon}{self._format_amount(amount_in_company_currency)}",
                                         "payment_status": payment.state or '',
                                     }
                                     cashflows.append(cashflow_entry)
                                     cashflow_id_counter += 1
-                                    
-                                    _logger.info(f"Added cashflow entry: {cashflow_entry}")
-                        
+                                                            
                         except Exception as e:
                             _logger.error("Error processing analytic distribution for invoice %s, line %s: %s", 
                                         invoice.id, line.id, str(e))
@@ -857,11 +834,8 @@ class DashboardReports(models.Model):
             ('company_id', '=', self.company_id.id)
         ], order='date desc')
         
-        _logger.info(f"Vendor payments found: {len(vendor_payments)}")
 
         for payment in vendor_payments:
-            _logger.info(f"Processing vendor payment: {payment.id} - {payment.name}")
-            
             # Fix: Use proper reconciliation method
             reconciled_bills = payment.reconciled_bill_ids
             if not reconciled_bills:
@@ -872,8 +846,6 @@ class DashboardReports(models.Model):
                     lambda m: m.move_type in ('in_invoice', 'in_refund')
                 )
             
-            _logger.info(f"Reconciled bills for payment {payment.id}: {len(reconciled_bills)}")
-
             for bill in reconciled_bills:
                 _logger.info(f"Processing bill: {bill.id} - {bill.name}")
                 
@@ -888,9 +860,7 @@ class DashboardReports(models.Model):
                                 distribution = json.loads(distribution) if distribution else {}
                             elif not isinstance(distribution, dict):
                                 distribution = {}
-                            
-                            _logger.info(f"Processing line {line.id} with distribution: {distribution}")
-                            
+                                                        
                             for account_id_str, percentage in distribution.items():
                                 account_id = int(account_id_str)
                                 
@@ -937,14 +907,12 @@ class DashboardReports(models.Model):
                                         "local_export": region,
                                         "tags": project_tags,
                                         "source_document": bill.name or '',
-                                        "payment_amount": self._format_amount(amount_in_company_currency),
+                                        "payment_amount": f"{comapny_currancy_icon}{self._format_amount(amount_in_company_currency)}",
                                         "payment_status": payment.state or '',
                                     }
                                     cashflows.append(cashflow_entry)
                                     cashflow_id_counter += 1
-                                    
-                                    _logger.info(f"Added cashflow entry: {cashflow_entry}")
-                        
+                                                            
                         except Exception as e:
                             _logger.error("Error processing analytic distribution for bill %s, line %s: %s", 
                                         bill.id, line.id, str(e))
@@ -953,22 +921,14 @@ class DashboardReports(models.Model):
         net_local_cashflow = total_local_inflow - total_local_outflow
         net_export_cashflow = total_export_inflow - total_export_outflow
 
-        _logger.info(f"=== CASHFLOW SUMMARY ===")
-        _logger.info(f"Total cashflow entries: {len(cashflows)}")
-        _logger.info(f"Local inflow: {total_local_inflow}")
-        _logger.info(f"Local outflow: {total_local_outflow}")
-        _logger.info(f"Export inflow: {total_export_inflow}")
-        _logger.info(f"Export outflow: {total_export_outflow}")
-        _logger.info("=== CASHFLOW DEBUG END ===")
-
         return {
             'count': cashflow_id_counter,
             'cashflows': cashflows,
-            'total_local_cashflow_inflow': self._format_amount(total_local_inflow),
-            'total_export_cashflow_inflow': self._format_amount(total_export_inflow),
-            'total_local_cashflow_outflow': self._format_amount(total_local_outflow),
-            'total_export_cashflow_outflow': self._format_amount(total_export_outflow),
-            'net_local_cashflow': self._format_amount(net_local_cashflow),
-            'net_export_cashflow': self._format_amount(net_export_cashflow),
-            'total_net_cashflow': self._format_amount(net_local_cashflow + net_export_cashflow)
+            'total_local_cashflow_inflow': f"{comapny_currancy_icon}{self._format_amount(total_local_inflow)}",
+            'total_export_cashflow_inflow': f"{comapny_currancy_icon}{self._format_amount(total_export_inflow)}",
+            'total_local_cashflow_outflow': f"{comapny_currancy_icon}{self._format_amount(total_local_outflow)}",
+            'total_export_cashflow_outflow': f"{comapny_currancy_icon}{self._format_amount(total_export_outflow)}",
+            'net_local_cashflow': f"{comapny_currancy_icon}{self._format_amount(net_local_cashflow)}",
+            'net_export_cashflow': f"{comapny_currancy_icon}{self._format_amount(net_export_cashflow)}",
+            'total_net_cashflow': f"{comapny_currancy_icon}{self._format_amount(net_local_cashflow + net_export_cashflow)}"
         }
