@@ -18,7 +18,7 @@
                         padding-top: 0;
                     }
                 </style>
-                <div class="o_form_view_container" style="width: 90%; margin: auto;">
+                <div class="o_form_view_container" style="width: 100%; margin: auto;">
                     <!-- Header section with Dashboard title on the left and filters on the right -->
                     <div class="row align-items-center mt-3 mb-2">
                         

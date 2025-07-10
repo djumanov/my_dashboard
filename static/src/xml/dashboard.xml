@@ -522,406 +522,272 @@
     <!-- Dashboard Reports -->
     <t t-name="custom.druksmart_dashboard_reports" owl="1">
         <div class="dashboard-wrapper">
+                    <!-- Report Tabs -->
+            <div class="d-flex justify-content-start align-items-center flex-wrap mb-3 gap-3">
+                <!-- Filters -->
+                 
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary px-3 py-1 fw-bold"
+                            t-att-class="{ 'btn-secondary': this.props.record.data.category === 'sales' }"
+                            t-on-click="() => this.setCategory('sales')">
+                        SALES
+                    </button>
+                    <button class="btn btn-outline-secondary px-3 py-1 fw-bold"
+                            t-att-class="{ 'btn-secondary': this.props.record.data.category === 'revenue' }"
+                            t-on-click="() => this.setCategory('revenue')">
+                        REVENUE
+                    </button>
+                    <button class="btn btn-outline-secondary px-3 py-1 fw-bold"
+                            t-att-class="{ 'btn-secondary': this.props.record.data.category === 'expense' }"
+                            t-on-click="() => this.setCategory('expense')">
+                        VENDOR BILLS
+                    </button>
+                    <button class="btn btn-outline-secondary px-3 py-1 fw-bold"
+                            t-att-class="{ 'btn-secondary': this.props.record.data.category === 'cashflow' }"
+                            t-on-click="() => this.setCategory('cashflow')">
+                        CASH FLOW
+                    </button>
+                </div>
+            </div>
 
+
+            <!-- SALES -->
             <t t-if="this.props.record.data.category === 'sales'">
-                <!-- Sales Report -->
-                <div class="mb-2 p-2 bg-primary text-white fw-bold rounded">Sales Report</div>
-                <div class="card shadow-sm">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
-                            <thead>
-                                <tr class="bg-light">
-                                    <th class="border-end fw-bold">
-                                        Date
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Sale Order No
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Local/Export
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Tags
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Customer
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Sale Person
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Untaxed Amount
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Converted Amount
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <t t-if="!this.state.main_data.sales">
-                                    <tr>
-                                        <td colspan="16" class="text-center py-4">
-                                            <div class="text-muted">
-                                                <i class="fa fa-info-circle me-1" /> No projects found matching the current filters
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </t>
+            <t t-set="sales_local" t-value="((this.state.main_data && this.state.main_data.sales) || []).filter(r => r.local_export === 'Local')" />
+            <t t-set="sales_export" t-value="((this.state.main_data && this.state.main_data.sales) || []).filter(r => r.local_export === 'Export')" />
 
-                                <t t-foreach="this.state.main_data.sales || []" t-as="row" t-key="row.sale_id">
-                                    <tr class="project-row">
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.date" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.sales_order_no" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.local_export" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.tags" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.customer" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.sale_person" />
-                                        </td>
-                                        <td class="border-end text-end">
-                                            <t t-esc="row.untaxed_amount" />
-                                        </td>
-                                        <td class="border-end text-end">
-                                            <t t-esc="row.converted_amount" />
-                                        </td>
-                                    </tr>
-                                </t>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <!-- Summary and Legend -->
-                    <div class="p-3 border-top d-flex justify-content-between">
-                        <div class="text-muted small">
-                            <i class="fa fa-info-circle me-1"></i> This report provides a detailed view of sales orders, including local and export sales, along with associated tags and customer information.
-                        </div>
-                        <div class="d-flex gap-3">
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-info me-1">Local</span>
-                                <span class="text-muted small">
-                                    <t t-esc="this.state.main_data.total_sales_local_untaxed" />
-                                </span>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-success me-1">Export</span>
-                                <span class="text-muted small">
-                                    <t t-esc="this.state.main_data.total_sales_export_untaxed" />
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
+
+            <div class="mb-2 p-2 bg-primary text-white fw-bold rounded">Local Sales</div>
+            <t t-call="custom.sales_report_table">
+                <t t-set="sales_data" t-value="sales_local" />
             </t>
 
+            <div class="mb-2 p-2 bg-success text-white fw-bold rounded mt-4">Export Sales</div>
+            <t t-call="custom.sales_report_table">
+                <t t-set="sales_data" t-value="sales_export" />
+            </t>
+            </t>
+
+            <!-- REVENUE -->
             <t t-if="this.props.record.data.category === 'revenue'">
-                <!-- Revenue Report -->
-                <div class="mb-2 p-2 bg-primary text-white fw-bold rounded">Revenue Report</div>
-                <div class="card shadow-sm">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
-                            <thead>
-                                <tr class="bg-light">
-                                    <th class="border-end fw-bold">
-                                        Date
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Invoice No
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Sale Order No
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Local/Export
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Tags
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Customer
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Untaxed Amount
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Payment Status
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <t t-if="!this.state.main_data.revenues">
-                                    <tr>
-                                        <td colspan="16" class="text-center py-4">
-                                            <div class="text-muted">
-                                                <i class="fa fa-info-circle me-1" /> No projects found matching the current filters
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </t>
+            <t t-set="revenue_local" t-value="((this.state.main_data && this.state.main_data.revenues) || []).filter(r => r.local_export === 'Local')" />
+            <t t-set="revenue_export" t-value="((this.state.main_data && this.state.main_data.revenues) || []).filter(r => r.local_export === 'Export')" />
 
-                                <t t-foreach="this.state.main_data.revenues || []" t-as="row" t-key="row.revenue_id">
-                                    <tr class="project-row">
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.date" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.invoice_no" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.sales_order_no" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.local_export" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.tags" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.customer" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.untaxed_amount" />
-                                        </td>
-                                        <td class="border-end text-end">
-                                            <t t-esc="row.payment_status" />
-                                        </td>
-                                    </tr>
-                                </t>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <!-- Summary and Legend -->
-                    <div class="p-3 border-top d-flex justify-content-between">
-                        <div class="text-muted small">
-                            <i class="fa fa-info-circle me-1"></i> This report provides a detailed view of sales orders, including local and export sales, along with associated tags and customer information.
-                        </div>
-                        <div class="d-flex gap-3">
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-info me-1">Local</span>
-                                <span class="text-muted small">
-                                    <t t-esc="this.state.main_data.total_local_revenue_untaxed" />
-                                </span>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-success me-1">Export</span>
-                                <span class="text-muted small">
-                                    <t t-esc="this.state.main_data.total_export_revenue_untaxed" />
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
+            <div class="mb-2 p-2 bg-primary text-white fw-bold rounded">Local Revenue</div>
+            <t t-call="custom.revenue_report_table">
+                <t t-set="revenue_data" t-value="revenue_local" />
             </t>
 
+            <div class="mb-2 p-2 bg-success text-white fw-bold rounded mt-4">Export Revenue</div>
+            <t t-call="custom.revenue_report_table">
+                <t t-set="revenue_data" t-value="revenue_export" />
+            </t>
+            </t>
+
+            <!-- VENDOR BILLS -->
             <t t-if="this.props.record.data.category === 'expense'">
-                <!-- Expense Report -->
-                <div class="mb-2 p-2 bg-primary text-white fw-bold rounded">Vendor Bills Report</div>
-                <div class="card shadow-sm">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
-                            <thead>
-                                <tr class="bg-light">
-                                    <th class="border-end fw-bold">
-                                        Date
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Bill No
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Vendor
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Local/Export
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Tags
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Source Document
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Tax Excluded
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Payment Status
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <t t-if="!this.state.main_data.expenses">
-                                    <tr>
-                                        <td colspan="16" class="text-center py-4">
-                                            <div class="text-muted">
-                                                <i class="fa fa-info-circle me-1" /> No projects found matching the current filters
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </t>
+            <t t-set="expense_local" t-value="((this.state.main_data && this.state.main_data.expenses) || []).filter(r => r.local_export === 'Local')" />
+            <t t-set="expense_export" t-value="((this.state.main_data && this.state.main_data.expenses) || []).filter(r => r.local_export === 'Export')" />
 
-                                <t t-foreach="this.state.main_data.expenses || []" t-as="row" t-key="row.expense_id">
-                                    <tr class="project-row">
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.date" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.bill_no" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.vendor" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.local_export" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.tags" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.source_document" />
-                                        </td>
-                                        <td class="border-end text-end">
-                                            <t t-esc="row.tax_excluded" />
-                                        </td>
-                                        <td class="border-end text-end">
-                                            <t t-esc="row.payment_status" />
-                                        </td>
-                                    </tr>
-                                </t>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <!-- Summary and Legend -->
-                    <div class="p-3 border-top d-flex justify-content-between">
-                        <div class="text-muted small">
-                            <i class="fa fa-info-circle me-1"></i> This report provides a detailed view of sales orders, including local and export sales, along with associated tags and customer information.
-                        </div>
-                        <div class="d-flex gap-3">
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-info me-1">Local</span>
-                                <span class="text-muted small">
-                                    <t t-esc="this.state.main_data.total_local_expense_untaxed" />
-                                </span>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-success me-1">Export</span>
-                                <span class="text-muted small">
-                                    <t t-esc="this.state.main_data.total_export_expense_untaxed" />
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
+            <div class="mb-2 p-2 bg-primary text-white fw-bold rounded">Local Vendor Bills</div>
+            <t t-call="custom.expense_report_table">
+                <t t-set="expense_data" t-value="expense_local" />
             </t>
 
-            <t t-if="this.props.record.data.category === 'cashflow'">
-                <!-- Cashflow Report -->
-                <div class="mb-2 p-2 bg-primary text-white fw-bold rounded">Cashflow Report</div>
-                <div class="card shadow-sm">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
-                            <thead>
-                                <tr class="bg-light">
-                                    <th class="border-end fw-bold">
-                                        Date
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Inflow/Outflow
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Project
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Local/Export
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Tags
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Source Document
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Payment Amount
-                                    </th>
-                                    <th class="border-end fw-bold">
-                                        Payment Status
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <t t-if="!this.state.main_data.cashflows">
-                                    <tr>
-                                        <td colspan="16" class="text-center py-4">
-                                            <div class="text-muted">
-                                                <i class="fa fa-info-circle me-1" /> No projects found matching the current filters
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </t>
+            <div class="mb-2 p-2 bg-success text-white fw-bold rounded mt-4">Export Vendor Bills</div>
+            <t t-call="custom.expense_report_table">
+                <t t-set="expense_data" t-value="expense_export" />
+            </t>
+            </t>
 
-                                <t t-foreach="this.state.main_data.cashflows || []" t-as="row" t-key="row.cashflow_id">
-                                    <tr class="project-row">
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.date" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.inflow_outflow" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.project" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.local_export" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.tags" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.source_document" />
-                                        </td>
-                                        <td class="border-end fw-medium">
-                                            <t t-esc="row.payment_amount" />
-                                        </td>
-                                        <td class="border-end text-end">
-                                            <t t-esc="row.payment_status" />
-                                        </td>
-                                    </tr>
-                                </t>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <!-- Summary and Legend -->
-                    <div class="p-3 border-top d-flex justify-content-between">
-                        <div class="text-muted small">
-                            <i class="fa fa-info-circle me-1"></i> This report provides a detailed view of sales orders, including local and export sales, along with associated tags and customer information.
-                        </div>
-                        <div class="d-flex gap-3">
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-info me-1">Local</span>
-                                <span class="text-muted small">
-                                    <t t-esc="this.state.main_data.net_local_cashflow" />
-                                </span>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-success me-1">Export</span>
-                                <span class="text-muted small">
-                                    <t t-esc="this.state.main_data.net_export_cashflow" />
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div> 
+            <!-- CASHFLOW -->
+            <t t-if="this.props.record.data.category === 'cashflow'">
+            <t t-set="cashflow_local" t-value="((this.state.main_data && this.state.main_data.cashflows) || []).filter(r => r.local_export === 'Local')" />
+            <t t-set="cashflow_export" t-value="((this.state.main_data && this.state.main_data.cashflows) || []).filter(r => r.local_export === 'Export')" />
+
+
+            <div class="mb-2 p-2 bg-primary text-white fw-bold rounded">Local Cash Flow</div>
+            <t t-call="custom.cashflow_report_table">
+                <t t-set="cashflow_data" t-value="cashflow_local" />
+            </t>
+
+            <div class="mb-2 p-2 bg-success text-white fw-bold rounded mt-4">Export Cash Flow</div>
+            <t t-call="custom.cashflow_report_table">
+                <t t-set="cashflow_data" t-value="cashflow_export" />
+            </t>
             </t>
         </div>
+
+        <t t-name="custom.sales_report_table">
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
+                    <thead>
+                    <tr class="bg-light">
+                        <th class="border-end fw-bold">Date</th>
+                        <th class="border-end fw-bold">Sale Order No</th>
+                        <th class="border-end fw-bold">Local/Export</th>
+                        <th class="border-end fw-bold">Tags</th>
+                        <th class="border-end fw-bold">Customer</th>
+                        <th class="border-end fw-bold">Sale Person</th>
+                        <th class="border-end fw-bold">Untaxed Amount</th>
+                        <th class="border-end fw-bold">Converted Amount</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <t t-if="!sales_data || sales_data.length === 0">
+                        <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            <i class="fa fa-info-circle me-1"/> No sales found for this category.
+                        </td>
+                        </tr>
+                    </t>
+                    <t t-foreach="sales_data" t-as="row" t-key="row.sale_id">
+                        <tr>
+                        <td class="border-end"><t t-esc="row.date"/></td>
+                        <td class="border-end"><t t-esc="row.sales_order_no"/></td>
+                        <td class="border-end"><t t-esc="row.local_export"/></td>
+                        <td class="border-end"><t t-esc="row.tags"/></td>
+                        <td class="border-end"><t t-esc="row.customer"/></td>
+                        <td class="border-end"><t t-esc="row.sale_person"/></td>
+                        <td class="border-end text-end"><t t-esc="row.untaxed_amount"/></td>
+                        <td class="border-end text-end"><t t-esc="row.converted_amount"/></td>
+                        </tr>
+                    </t>
+                    </tbody>
+                </table>
+                </div>
+            </div>
+        </t>
+
+        <t t-name="custom.revenue_report_table">
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
+                    <thead>
+                    <tr class="bg-light">
+                        <th class="border-end fw-bold">Date</th>
+                        <th class="border-end fw-bold">Invoice No</th>
+                        <th class="border-end fw-bold">Sale Order No</th>
+                        <th class="border-end fw-bold">Local/Export</th>
+                        <th class="border-end fw-bold">Tags</th>
+                        <th class="border-end fw-bold">Customer</th>
+                        <th class="border-end fw-bold">Untaxed Amount</th>
+                        <th class="border-end fw-bold">Payment Status</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <t t-if="!revenue_data || revenue_data.length === 0">
+                        <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            <i class="fa fa-info-circle me-1"/> No revenue found for this category.
+                        </td>
+                        </tr>
+                    </t>
+                    <t t-foreach="revenue_data" t-as="row" t-key="row.revenue_id">
+                        <tr>
+                        <td class="border-end"><t t-esc="row.date"/></td>
+                        <td class="border-end"><t t-esc="row.invoice_no"/></td>
+                        <td class="border-end"><t t-esc="row.sales_order_no"/></td>
+                        <td class="border-end"><t t-esc="row.local_export"/></td>
+                        <td class="border-end"><t t-esc="row.tags"/></td>
+                        <td class="border-end"><t t-esc="row.customer"/></td>
+                        <td class="border-end text-end"><t t-esc="row.untaxed_amount"/></td>
+                        <td class="border-end text-end"><t t-esc="row.payment_status"/></td>
+                        </tr>
+                    </t>
+                    </tbody>
+                </table>
+                </div>
+            </div>
+        </t>
+
+        <t t-name="custom.expense_report_table">
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
+                    <thead>
+                    <tr class="bg-light">
+                        <th class="border-end fw-bold">Date</th>
+                        <th class="border-end fw-bold">Bill No</th>
+                        <th class="border-end fw-bold">Vendor</th>
+                        <th class="border-end fw-bold">Local/Export</th>
+                        <th class="border-end fw-bold">Tags</th>
+                        <th class="border-end fw-bold">Source Document</th>
+                        <th class="border-end fw-bold">Tax Excluded</th>
+                        <th class="border-end fw-bold">Payment Status</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <t t-if="!expense_data || expense_data.length === 0">
+                        <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            <i class="fa fa-info-circle me-1"/> No vendor bills found for this category.
+                        </td>
+                        </tr>
+                    </t>
+                    <t t-foreach="expense_data" t-as="row" t-key="row.expense_id">
+                        <tr>
+                        <td class="border-end"><t t-esc="row.date"/></td>
+                        <td class="border-end"><t t-esc="row.bill_no"/></td>
+                        <td class="border-end"><t t-esc="row.vendor"/></td>
+                        <td class="border-end"><t t-esc="row.local_export"/></td>
+                        <td class="border-end"><t t-esc="row.tags"/></td>
+                        <td class="border-end"><t t-esc="row.source_document"/></td>
+                        <td class="border-end text-end"><t t-esc="row.tax_excluded"/></td>
+                        <td class="border-end text-end"><t t-esc="row.payment_status"/></td>
+                        </tr>
+                    </t>
+                    </tbody>
+                </table>
+                </div>
+            </div>
+        </t>
+
+        <t t-name="custom.cashflow_report_table">
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
+                    <thead>
+                    <tr class="bg-light">
+                        <th class="border-end fw-bold">Date</th>
+                        <th class="border-end fw-bold">Inflow/Outflow</th>
+                        <th class="border-end fw-bold">Project</th>
+                        <th class="border-end fw-bold">Local/Export</th>
+                        <th class="border-end fw-bold">Tags</th>
+                        <th class="border-end fw-bold">Source Document</th>
+                        <th class="border-end fw-bold">Payment Amount</th>
+                        <th class="border-end fw-bold">Payment Status</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <t t-if="!cashflow_data || cashflow_data.length === 0">
+                        <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            <i class="fa fa-info-circle me-1"/> No cashflows found for this category.
+                        </td>
+                        </tr>
+                    </t>
+                    <t t-foreach="cashflow_data" t-as="row" t-key="row.cashflow_id">
+                        <tr>
+                        <td class="border-end"><t t-esc="row.date"/></td>
+                        <td class="border-end"><t t-esc="row.inflow_outflow"/></td>
+                        <td class="border-end"><t t-esc="row.project"/></td>
+                        <td class="border-end"><t t-esc="row.local_export"/></td>
+                        <td class="border-end"><t t-esc="row.tags"/></td>
+                        <td class="border-end"><t t-esc="row.source_document"/></td>
+                        <td class="border-end text-end"><t t-esc="row.payment_amount"/></td>
+                        <td class="border-end text-end"><t t-esc="row.payment_status"/></td>
+                        </tr>
+                    </t>
+                    </tbody>
+                </table>
+                </div>
+            </div>
+        </t>
+
     </t>
 </templates>
