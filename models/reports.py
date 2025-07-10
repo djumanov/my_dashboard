@@ -386,6 +386,14 @@ class DashboardReports(models.Model):
         total_local_revenue_untaxed = 0.0
         total_export_revenue_untaxed = 0.0
 
+        payment_state_mapping = {
+            'paid': 'Paid',
+            'not_paid': 'Not Paid',
+            'in_payment': 'In Payment',
+            'partial': 'Partially Paid',
+            'reversed': 'Reversed',
+        }
+
         revenue_id_counter = 1
 
         for invoice in customer_invoices:
@@ -520,8 +528,8 @@ class DashboardReports(models.Model):
                             "local_export": local_export_label,
                             "tags": tag_string,
                             "customer": invoice.partner_id.name or '',
-                            "untaxed_amount": self._format_amount(total_untaxed_amount),
-                            "payment_status": invoice.payment_state or '',
+                            "untaxed_amount": self._format_amount(invoice.amount_untaxed_signed),
+                            "payment_status": payment_state_mapping.get(invoice.payment_state, invoice.payment_state) or '',
                         })
                         revenue_id_counter += 1
                         
@@ -570,6 +578,14 @@ class DashboardReports(models.Model):
         expenses = [] # expense_id, date, bill_no, vendor, local_export, tags, source_document, tax_excluded, payment_status
         total_local_expense_untaxed = 0.0
         total_export_expense_untaxed = 0.0
+
+        payment_state_mapping = {
+            'paid': 'Paid',
+            'not_paid': 'Not Paid',
+            'in_payment': 'In Payment',
+            'partial': 'Partially Paid',
+            'reversed': 'Reversed',
+        }
 
         expense_id_counter = 1
 
@@ -667,8 +683,8 @@ class DashboardReports(models.Model):
                     "local_export": region,
                     "tags": tags,
                     "source_document": bill.invoice_origin or '',
-                    "tax_excluded": self._format_amount(total_untaxed_amount),
-                    "payment_status": bill.payment_state or '',
+                    "tax_excluded": self._format_amount(bill.amount_untaxed_signed),
+                    "payment_status": payment_state_mapping.get(bill.payment_state, bill.payment_state) or '',
                 })
                 expense_id_counter += 1
                 # Update totals
@@ -777,26 +793,29 @@ class DashboardReports(models.Model):
                                 line_amount = line.price_subtotal * percentage_decimal
                                 
                                 # Convert to company currency
-                                amount_in_company_currency = invoice_currency._convert(
-                                    line_amount,
-                                    company_currency,
-                                    self.env.company,
-                                    invoice_date
-                                )
-                                
+                                # if self.category_id.currency_id != invoice_currency:
+                                #     amount_in_company_currency = invoice_currency._convert(
+                                #         line_amount,
+                                #         company_currency.id,
+                                #         self.env.company,
+                                #         invoice_date
+                                #     )
+                                # else:
+                                #     amount_in_company_currency = line_amount
+
                                 region = ""
                                 project_name = ""
                                 project = None
                                 
                                 if account_id in local_analytic_account_ids:
                                     region = "Local"
-                                    total_local_inflow += amount_in_company_currency
+                                    total_local_inflow += line_amount
                                     project = local_projects.filtered(lambda p: p.analytic_account_id.id == account_id)
                                     if project:
                                         project_name = project[0].name
                                 elif account_id in export_analytic_account_ids:
                                     region = "Export"
-                                    total_export_inflow += amount_in_company_currency
+                                    total_export_inflow += line_amount
                                     project = export_projects.filtered(lambda p: p.analytic_account_id.id == account_id)
                                     if project:
                                         project_name = project[0].name
@@ -806,6 +825,8 @@ class DashboardReports(models.Model):
                                     project_tags = ""
                                     if project:
                                         project_tags = ", ".join(project.tag_ids.mapped('name'))
+
+                                    invoice_currency_icon = invoice_currency.symbol or ''
                                     
                                     cashflow_entry = {
                                         "cashflow_id": cashflow_id_counter,
@@ -815,7 +836,7 @@ class DashboardReports(models.Model):
                                         "local_export": region,
                                         "tags": project_tags,
                                         "source_document": invoice.name or '',
-                                        "payment_amount": f"{comapny_currancy_icon}{self._format_amount(amount_in_company_currency)}",
+                                        "payment_amount": f"{invoice_currency_icon}{self._format_amount(line_amount)}",
                                         "payment_status": payment.state or '',
                                     }
                                     cashflows.append(cashflow_entry)
@@ -868,13 +889,16 @@ class DashboardReports(models.Model):
                                 percentage_decimal = float(percentage) / 100.0 if percentage > 1 else float(percentage)
                                 line_amount = line.price_subtotal * percentage_decimal
                                 
-                                # Convert to company currency
-                                amount_in_company_currency = bill_currency._convert(
-                                    line_amount,
-                                    company_currency,
-                                    self.env.company,
-                                    bill_date
-                                )
+                                # if self.category_id.currency_id != bill_currency:
+                                #     # Convert to company currency
+                                #     amount_in_company_currency = bill_currency._convert(
+                                #         line_amount,
+                                #         company_currency.id,
+                                #         self.env.company,
+                                #         bill_date
+                                #     )
+                                # else:
+                                #     amount_in_company_currency = line_amount
                                 
                                 region = ""
                                 project_name = ""
@@ -882,13 +906,13 @@ class DashboardReports(models.Model):
                                 
                                 if account_id in local_analytic_account_ids:
                                     region = "Local"
-                                    total_local_outflow += amount_in_company_currency
+                                    total_local_outflow += line_amount
                                     project = local_projects.filtered(lambda p: p.analytic_account_id.id == account_id)
                                     if project:
                                         project_name = project[0].name
                                 elif account_id in export_analytic_account_ids:
                                     region = "Export"
-                                    total_export_outflow += amount_in_company_currency
+                                    total_export_outflow += line_amount
                                     project = export_projects.filtered(lambda p: p.analytic_account_id.id == account_id)
                                     if project:
                                         project_name = project[0].name
@@ -898,6 +922,8 @@ class DashboardReports(models.Model):
                                     project_tags = ""
                                     if project:
                                         project_tags = ", ".join(project.tag_ids.mapped('name'))
+
+                                    bill_currency_icon = bill_currency.symbol or ''
                                     
                                     cashflow_entry = {
                                         "cashflow_id": cashflow_id_counter,
@@ -907,7 +933,7 @@ class DashboardReports(models.Model):
                                         "local_export": region,
                                         "tags": project_tags,
                                         "source_document": bill.name or '',
-                                        "payment_amount": f"{comapny_currancy_icon}{self._format_amount(amount_in_company_currency)}",
+                                        "payment_amount": f"{bill_currency_icon}{self._format_amount(line_amount)}",
                                         "payment_status": payment.state or '',
                                     }
                                     cashflows.append(cashflow_entry)
