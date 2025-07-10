@@ -216,9 +216,9 @@ class DashboardReports(models.Model):
                 elif project in export_projects:
                     local_export = "Export"
                 else:
-                    local_export = "Other"  # Project exists but not tagged as Local/Export
+                    continue
                 
-                if self.company_id.currency_id != sale_order.currency_id:
+                if self.env.company.currency_id != sale_order.currency_id:
                     converted_amount = sale_order.currency_id._convert(
                         untaxed_amount,
                         self.company_id.currency_id,
@@ -239,7 +239,7 @@ class DashboardReports(models.Model):
                     "tags": tags,
                     "customer": sale_order.partner_id.name,
                     "sale_person": sale_order.user_id.name,
-                    "untaxed_amount": f"{sale_currancy_icon}{self._format_amount(total_untaxed_amount)}",
+                    "untaxed_amount": f"{sale_currancy_icon}{self._format_amount(untaxed_amount)}",
                     "converted_amount": f"{comapany_currancy_icon}{self._format_amount(converted_amount)}",
                 })
                 sale_id_counter += 1
@@ -312,7 +312,7 @@ class DashboardReports(models.Model):
                     # Skip unclassified sales
                     continue
                 
-                if self.company_id.currency_id != sale_order.currency_id:
+                if self.env.company.currency_id != sale_order.currency_id:
                     converted_amount = sale_order.currency_id._convert(
                         total_untaxed_amount,
                         self.company_id.currency_id,
