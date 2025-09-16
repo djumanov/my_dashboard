@@ -7,7 +7,7 @@ const { Component, useEffect, useState } = owl;
 
 
 export class Dashboard extends Component {
-    static template = 'custom.dashboard'
+    static template = 'custom.hr_dashboard'
     setup() {
         super.setup();
 
@@ -17,10 +17,9 @@ export class Dashboard extends Component {
         useEffect(
             () => {
                 this.state.main_data = JSON.parse(this.props.record.data.dashboard_data);
-                this.drawPie('expenses', this.pieData(this.state.main_data.expenses?.region_wise));
-                this.drawPie('revenue', this.pieData(this.state.main_data.revenue?.region_wise));
-                this.drawPie('sales', this.pieData(this.state.main_data.sales?.region_wise));
-                this.drawChartIncome();
+                this.drawPie('gender', this.pieData(this.state.main_data.hr?.gender_data));
+                this.drawBar();
+                this.drawBarHorizontal();
             },
             () => [this.props.record.data.dashboard_data]
         );
@@ -99,14 +98,7 @@ export class Dashboard extends Component {
                             ">${formattedValue}</div>`;
                         },
                         align: 'center'
-                    },
-                    point: {
-                    events: {
-                        click: function () {
-                            window.open("/web#action=my_dashboard.action_l2_dashboard", "_blank");
-                        }
                     }
-                }
                 }
             },
             series: [{
@@ -118,36 +110,111 @@ export class Dashboard extends Component {
         });
     }
     
-    drawChartIncome() {
-        const categories = this.state.main_data.cash_flow.region_wise.inflow.map(item => item.name);
-        const inflowData = this.state.main_data.cash_flow.region_wise.inflow.map(item => item.value);
-        const outflowData = this.state.main_data.cash_flow.region_wise.outflow.map(item => item.value);
+
+    drawBar() {
+        const categories = this.state.main_data.hr?.categories.map(item => item.name) || [];
+        const data = this.state.main_data.hr?.categories.map(item => item.count) || [];
     
-        Highcharts.chart('cash', {
+        Highcharts.chart('category', {
             chart: {
                 type: 'column',
                 options3d: {
                     enabled: true,
-                    alpha: 10,
-                    beta: 5,
-                    depth: 25,
-                    viewDistance: 25
+                    alpha: 15,
+                    beta: 0,
                 }
             },
             title: {
-                text: 'Region Wise Cash Flow',
-                align: 'center',
+                text: 'Employee Count by Category',
                 style: {
-                    fontSize: '16px',
+                    fontSize: '14px',
                     fontWeight: 'bold',
                     color: '#fff'
                 },
-                backgroundColor: '#3b71ca',
+                align: 'center',
+                verticalAlign: 'top',
+                backgroundColor: '#1e88e5',
                 borderRadius: 5,
                 padding: 10
             },
             xAxis: {
                 categories: categories,
+                labels: {
+                    style: {
+                        fontSize: '13px',
+                    }
+                }
+            },
+            yAxis: {
+                title: { text: '' },
+                allowDecimals: false
+            },
+            tooltip: {
+                useHTML: true,
+                backgroundColor: '#000',
+                borderRadius: 8,
+                borderWidth: 0,
+                style: {
+                    color: '#fff',
+                    fontSize: '14px',
+                    padding: 12
+                },
+                formatter: function () {
+                    return `<b style="color:${this.color}; font-size: 14px;">${this.key}</b><br/>
+                            <span style="font-size: 13px;">${this.series.name}:</span> 
+                            <b style="font-size: 14px;">${this.y}</b>`;
+                }
+            },
+            plotOptions: {
+                column: {
+                    depth: 25,
+                    dataLabels: {
+                        enabled: true,
+                        color: '#000',
+                        style: {
+                            fontWeight: 'bold',
+                            fontSize: '13px'
+                        },
+                        verticalAlign: 'top',
+                        inside: false,
+                        formatter: function () {
+                            return this.y;
+                        }
+                    }
+                }
+            },
+            series: [{
+                name: 'Count',
+                data: data,
+                colorByPoint: true,
+                colors: ['#1e88e5', '#f28e2c']
+            }]
+        });
+    }
+    
+
+    drawBarHorizontal() {        
+        const categories = this.state.main_data.hr?.departments.map(item => item.name);
+        const data = this.state.main_data.hr?.departments.map(item => item.count);
+    
+        Highcharts.chart('department', {
+            chart: {
+                type: 'bar',
+                options3d: {
+                    enabled: true,
+                    alpha: 10,
+                    beta: 0,
+                    depth: 50,
+                    viewDistance: 25
+                },
+                backgroundColor: 'transparent', // optional for cleaner look
+            },
+            title: {
+                text: '',
+            },
+            xAxis: {
+                categories: categories,
+                title: { text: null },
                 labels: {
                     style: {
                         fontSize: '12px',
@@ -157,70 +224,67 @@ export class Dashboard extends Component {
             },
             yAxis: {
                 title: { text: null },
-                labels: { enabled: false },
-                gridLineWidth: 0,
-                lineWidth: 0
+                allowDecimals: false,
+                labels: {
+                    enabled: true
+                }
             },
             tooltip: {
                 useHTML: true,
                 backgroundColor: '#000',
                 borderRadius: 6,
-                borderWidth: 0,
                 style: {
                     color: '#fff',
                     fontSize: '14px'
                 },
                 formatter: function () {
-                    const value = Highcharts.numberFormat(this.y, 0, '.', ',');
-                    return `<b style="color:${this.color}">${this.series.name}</b>: <b>${value}</b>`;
+                    return `<b>${this.key}</b>: ${this.y} Employees`;
                 }
-                
             },
             plotOptions: {
-                column: {
+                series: {
+                    animation: true
+                },
+                bar: {
                     depth: 25,
-                    grouping: true,
                     dataLabels: {
                         enabled: true,
+                        inside: false,
+                        allowOverlap: true,
+                        crop: false,
+                        overflow: 'none',
                         formatter: function () {
-                            return `${Highcharts.numberFormat(this.y, 0, '.', ',')}`;
+                            return `${this.y}`;
                         },
                         style: {
-                            fontSize: '12px',
                             fontWeight: 'bold',
+                            fontSize: '13px',
                             color: '#000'
                         }
                     }
                 }
             },
-            legend: {
-                align: 'center',
-                verticalAlign: 'bottom',
-                layout: 'horizontal',
-                backgroundColor: '#FFFFFF'
-            },
-            series: [
-                {
-                    name: 'Inflow',
-                    data: inflowData,
-                    color: '#1e88e5'
-                },
-                {
-                    name: 'Outflow',
-                    data: outflowData,
-                    color: '#ff8f00'
-                }
-            ]
+            series: [{
+                name: 'Count',
+                data: data,
+                colorByPoint: true,
+                colors: ['#1e88e5']
+            }]
         });
     }
     
+    
     pieData(source) {
+        if (!source || !source.data || !Array.isArray(source.data)) {
+            console.warn("Invalid gender_data format:", source);
+            return [];
+        }
         return source.data.map(info => ({
-            name: info.name,
-            y: info.value,
+            name: info?.name || 'Unknown',
+            y: info?.value || 0,
         }));
     }
 
 }
 
-registry.category("fields").add("dashboard", Dashboard);
+registry.category("fields").add("hr_dashboard", Dashboard);
