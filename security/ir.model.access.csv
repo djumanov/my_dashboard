@@ -1,5 +1,6 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_l1_dashboard_user,l1.dashboard.user,model_l1_dashboard,base.group_user,1,1,1,0
+access_hr_dashboard_user,hr.dashboard.user,model_hr_dashboard,base.group_user,1,1,1,1
 access_l1_dashboard_manager,l1.dashboard.manager,model_l1_dashboard,base.group_system,1,1,1,1
 access_sale_target_admin,sale_target_admin,model_sale_target,base.group_system,1,1,1,1
 access_sale_target_ceo,sale_target_ceo,model_sale_target,base.group_partner_manager,1,1,1,1

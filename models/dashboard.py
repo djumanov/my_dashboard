@@ -103,7 +103,6 @@ class L1Dashboard(models.Model):
            
         sales_data = self._get_sales_data(start_date, end_date)
         financial_data = self._get_financial_data(start_date, end_date)
-        employee_data = self._get_employee_data()
         cash_flow_data = self._get_cash_flow_data(start_date, end_date)
         
         return {
@@ -177,27 +176,7 @@ class L1Dashboard(models.Model):
                     'total_outflow': cash_flow_data['outflows'],
                     'colors': ['#ff8f00', '#1e88e5'],
                 },
-            },
-            'hr': {
-                'total_employees': employee_data['total_employees'],
-                'gender_data': {
-                    'data': [
-                        {'name': 'Male', 'value': employee_data['gender_data']['male']},
-                        {'name': 'Female', 'value': employee_data['gender_data']['female']}
-                    ],
-                    'total': employee_data['gender_data']['male'] + employee_data['gender_data']['female'] + 
-                             employee_data['gender_data']['other'],
-                    'colors': ['#1e88e5', '#ff8f00'],
-                },
-                'departments': [
-                    {'name': dept, 'count': count} 
-                    for dept, count in employee_data['departments'].items()
-                ],
-                'categories': [
-                    {'name': cat, 'count': count} 
-                    for cat, count in employee_data['categories'].items()
-                ]
-            },
+            }
         }
     
     def _format_amount(self, amount):
@@ -206,6 +185,9 @@ class L1Dashboard(models.Model):
     
     def _get_sales_data(self, start_date, end_date):
         """Get sales related data for dashboard"""
+        # Get company currency
+        company_currency = self.env.company.currency_id
+
         sales_orders = self.env['sale.order'].search([
             ('date_order', '>=', start_date),
             ('date_order', '<=', end_date),
@@ -214,7 +196,17 @@ class L1Dashboard(models.Model):
         ])
         
         sales_order_count = len(sales_orders)
-        sales_amount = sum(order.amount_untaxed for order in sales_orders)
+        sales_amount = 0.0
+        for order in sales_orders:
+            sale_currency = order.currency_id
+            amount_in_company_currency = sale_currency._convert(
+                order.amount_untaxed,
+                company_currency,
+                self.env.company,
+                order.date_order
+            )
+            sales_amount += amount_in_company_currency
+
         # sales_amount = sum(order.amount_total for order in sales_orders)
         sales_target = self._get_yearly_sales_target()  # Ensure this returns a valid value
         
@@ -231,8 +223,6 @@ class L1Dashboard(models.Model):
 
         local_sales_amount = export_sales_amount = 0.0
 
-        # Get company currency
-        company_currency = self.env.company.currency_id
 
         
         for sales_order in sales_orders:
@@ -370,48 +360,6 @@ class L1Dashboard(models.Model):
             'export_revenue': revenue_region_wise['export_revenue'],
             'local_expenses': expenses_region_wise['local_expense'],
             'export_expenses': expenses_region_wise['export_expense'],
-        }
-
-    def _get_employee_data(self):
-        """Get employee related data for the dashboard"""
-        employees = self.env['hr.employee'].search([
-            ('company_id', '=', self.company_id.id),
-            ('active', '=', True),
-        ])
-        
-        total_employees = len(employees)
-        
-        gender_data = {
-            'male': len(employees.filtered(lambda e: e.gender == 'male')),
-            'female': len(employees.filtered(lambda e: e.gender == 'female')),
-            'other': len(employees.filtered(lambda e: e.gender not in ['male', 'female'] or not e.gender)),
-        }
-        
-        departments = {}
-        for employee in employees:
-            department_name = employee.department_id.name or 'Undefined'
-            departments[department_name] = departments.get(department_name, 0) + 1
-        
-        categories = self.env['hr.employee.category'].search([
-            ('name', 'not in', ['Male', 'Female'])
-        ])
-    
-        categories_count = {}
-        
-        for category in categories:
-            # Count employees in this category
-            employee_count = self.env['hr.employee'].search_count([
-                ('category_ids', 'in', category.id),
-                ('active', '=', True)  # Only count active employees
-            ])
-            
-            categories_count[category.name] = employee_count
-            
-        return {
-            'total_employees': total_employees,
-            'gender_data': gender_data,
-            'departments': departments,
-            'categories': categories_count,
         }
 
     def compute_untaxed_expenses(self, start_date, end_date):
@@ -791,14 +739,17 @@ class L1Dashboard(models.Model):
                         # Check each analytic account in the distribution
                         for account_id, percentage in distribution.items():
                             account_id = int(account_id)  # Ensure integer
-
-                            # Convert line amount to company currency
-                            amount_in_company_currency = bill_currency._convert(
-                                line.price_subtotal,
-                                company_currency,
-                                self.env.company,
-                                bill_date
-                            )
+                            
+                            if bill_currency != company_currency:
+                                # Convert line amount to company currency
+                                amount_in_company_currency = bill_currency._convert(
+                                    line.price_subtotal,
+                                    company_currency,
+                                    self.env.company,
+                                    bill_date
+                                )
+                            else:
+                                amount_in_company_currency = line.price_subtotal
 
                             # Check if the account is in local or export project accounts
                             if account_id in local_analytic_account_ids:

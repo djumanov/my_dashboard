@@ -72,7 +72,9 @@ class L3Dashboard(models.Model):
         for order in sale_orders:
             if hasattr(project, 'sale_order_id') and project.sale_order_id:
                 if project.sale_order_id == order:
-                    po_value += order.amount_untaxed
+                    company_currency = self.env.company.currency_id
+                    po_value += order.currency_id._convert(order.amount_untaxed, company_currency, self.env.company, order.date_order)
+                    # po_value += order.amount_untaxed
         
         # Initialize all variables
         invoiced = collected = vendor_invoice = payment_made = payroll_cost = 0.0

@@ -374,11 +374,19 @@ class L4Dashboard(models.Model):
             project_sales_orders |= project.sale_line_id.order_id
             
         # Total value from sale order
-        data["po_value"] = sale_order.amount_untaxed
+        company_currency = self.env.company.currency_id
+        data["po_value"] = sale_order.currency_id._convert(sale_order.amount_untaxed, company_currency, self.env.company, sale_order.date_order)
         
         # Calculate invoiced amount
         invoices = self._get_project_invoices(project, project_sales_orders, start_date, end_date)
         data["invoiced"] = sum(invoices.mapped('amount_untaxed_signed'))
+        # s = 0
+        # for invoice in invoices:
+        #     inv_date = invoice.invoice_date or invoice.date
+        #     amount_ccy = invoice.amount_untaxed_signed, company_currency
+        #     s += amount_ccy
+
+        # data["invoiced"] = s
         
         # Calculate collected amount (paid invoices)
         collected_invoices = invoices.filtered(

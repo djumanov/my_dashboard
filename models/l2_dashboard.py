@@ -1,7 +1,12 @@
 import json
+import logging
 from datetime import datetime
+from collections import defaultdict
+
 from odoo import api, fields, models, _
 from odoo.tools import float_round
+
+_logger = logging.getLogger(__name__)
 
 
 class L2Dashboard(models.Model):
@@ -10,17 +15,22 @@ class L2Dashboard(models.Model):
     _rec_name = 'name'
 
     name = fields.Char(
-        string='Dashboard Name', 
+        string='Dashboard Name',
         default=lambda self: _('L2 Dashboard - %s') % fields.Date.today().strftime('%Y')
     )
-    
-    dashboard_data = fields.Text(string='Dashboard Data', compute='_compute_dashboard_data')
+
+    dashboard_data = fields.Text(
+    string="Dashboard Data",
+    compute="_compute_dashboard_data",
+    readonly=True,
+    store=False,
+    )
+
     last_update = fields.Datetime(string='Last Update', readonly=True)
-    
+
     company_id = fields.Many2one('res.company', string='Company', default=lambda self: self.env.company)
     currency_id = fields.Many2one(related='company_id.currency_id')
-    
-    # Configuration fields
+
     year = fields.Selection(
         selection='_get_year_selection',
         string='Year',
@@ -28,22 +38,69 @@ class L2Dashboard(models.Model):
         required=True,
     )
     active = fields.Boolean(default=True)
-    
+
+    # ---------------- helpers ----------------
     @api.model
     def _get_year_selection(self):
-        """Generate year options from 2023 to current year + 1"""
         current_year = datetime.now().year
         return [(str(year), str(year)) for year in range(2023, current_year + 1)]
+
+    @staticmethod
+    def _month_names():
+        return [datetime(2000, i + 1, 1).strftime('%b') for i in range(12)]
+
+    @staticmethod
+    def _zeros():
+        return [0.0] * 12
+
+    @staticmethod
+    def _empty_breakdown():
+        return [[] for _ in range(12)]
+
+    @staticmethod
+    def _to_dict(dist):
+        """Analytic distribution -> dict[int, float]"""
+        if not dist:
+            return {}
+        if isinstance(dist, dict):
+            return dist
+        try:
+            return json.loads(dist)
+        except Exception:
+            return {}
+
+    @staticmethod
+    def _month_buckets():
+        return [defaultdict(float) for _ in range(12)]
+
+    @staticmethod
+    def _mk_breakdown(month_buckets, id_to_name):
+        out = []
+        for b in month_buckets:
+            arr = [
+                {
+                    "project_id": pid,
+                    "project": id_to_name.get(pid, str(pid)),
+                    "amount": round(val, 2),
+                }
+                for pid, val in b.items() if val
+            ]
+            arr.sort(key=lambda x: -x["amount"])
+            out.append(arr)
+        return out
+
+    def _format_amount(self, amount):
+        return float_round(amount, precision_digits=2)
+    # -----------------------------------------
 
     @api.depends('year', 'company_id')
     def _compute_dashboard_data(self):
         for record in self:
-            record.dashboard_data = json.dumps(record._get_dashboard_data())
+            record.dashboard_data = json.dumps(record._get_dashboard_data(), default=float)
             record.last_update = fields.Datetime.now()
 
     @api.model
     def get_dashboard_data_json(self, year=None):
-        """API method to get dashboard data in JSON format"""
         if not year:
             year = fields.Date.today().year
 
@@ -51,38 +108,26 @@ class L2Dashboard(models.Model):
             ('year', '=', year),
             ('company_id', '=', self.env.company.id)
         ], limit=1)
-        
+
         if not dashboard:
-            dashboard = self.create({
-                'year': year,
-                'company_id': self.env.company.id
-            })
-        
+            dashboard = self.create({'year': year, 'company_id': self.env.company.id})
+
         dashboard._compute_dashboard_data()
         return dashboard.dashboard_data
 
     def _get_dashboard_data(self):
-        """Compile all dashboard data into a structured dictionary"""
         self.ensure_one()
         year = int(self.year)
 
-        # Get sales data
         sales_data = self._get_sales_data(year)
-
-        # Get revenue data
         revenue_data = self._get_revenue_data(year)
-
-        #Get expenses data
         expenses_data = self._get_expenses_data(year)
-
-        #Get Cash Flow data
         cash_flow_data = self._get_cashflow_data(year)
-        
-        # Build complete dashboard structure
+
+        global_max = self._get_global_max(sales_data, revenue_data, expenses_data, cash_flow_data)
+
         return {
-            'filters': {
-                'year': year,
-            },
+            'filters': {'year': year},
             'company': {
                 'name': self.company_id.name,
                 'currency': self.currency_id.symbol,
@@ -92,551 +137,485 @@ class L2Dashboard(models.Model):
             'revenue': revenue_data,
             'expenses': expenses_data,
             'cash_flow': cash_flow_data,
+            'global_max': global_max,
             'last_update': fields.Datetime.to_string(fields.Datetime.now())
         }
-    
-    def _format_amount(self, amount):
-        """Format amount with 2 decimal precision"""
-        return float_round(amount, precision_digits=2)
-    
+
+    def _get_global_max(self, sales, revenue, expenses, cash_flow):
+        def flatten(values):
+            flat = []
+            for v in values or []:
+                if isinstance(v, (list, tuple)):
+                    flat.extend(flatten(v))
+                else:
+                    try:
+                        flat.append(float(v))
+                    except Exception:
+                        pass
+            return flat
+
+        all_numbers = []
+        for dataset in [sales, revenue, expenses]:
+            for entry in dataset.values():
+                all_numbers.extend(flatten(entry.get("amounts")))
+
+        for entry in cash_flow.values():
+            all_numbers.extend(flatten(entry.get("inflow")))
+            all_numbers.extend(flatten(entry.get("outflow")))
+
+        return max(all_numbers) if all_numbers else 0
+
+    # ---------------- data builders ----------------
     def _get_sales_data(self, year):
-        """
-        Calculate monthly sales data split between local and export
-        
-        This method retrieves all sales orders for the given year and categorizes
-        them as either local or export sales based on project tags or analytic accounts.
-        
-        Args:
-            year (int): The year for which to calculate sales data
-            
-        Returns:
-            dict: A dictionary containing total, local, and export sales data by month
-        """
-        # Get month abbreviations (Jan, Feb, etc.)
-        months = [datetime(2000, i+1, 1).strftime('%b') for i in range(12)]
-        
-        # Initialize arrays to store monthly sales data
-        total_monthly = [0.0] * 12
-        local_monthly = [0.0] * 12
-        export_monthly = [0.0] * 12
-        
-        # Define date range for the year
+        months = self._month_names()
+        total_monthly = self._zeros()
+        local_monthly = self._zeros()
+        export_monthly = self._zeros()
+
+        local_m_buckets = self._month_buckets()
+        export_m_buckets = self._month_buckets()
+
         start_date = f"{year}-01-01"
         end_date = f"{year}-12-31"
-        
-        # Get company currency
+
         company_currency = self.env.company.currency_id
-        
-        # Get confirmed sales orders for the year
-        sales_orders = self.env['sale.order'].search([
+
+        orders = self.env['sale.order'].search([
             ('date_order', '>=', start_date),
             ('date_order', '<=', end_date),
             ('company_id', '=', self.env.company.id),
             ('state', 'in', ['sale', 'done']),
         ])
-        
-        # Get Local and Export tags
+
         local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
         export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
-        
-        # Ensure tags exist
+
         if not local_tag or not export_tag:
-            raise ValueError("Local or Export tags not found")
-        
-        # Get projects by tags
+            # return zeros instead of raising to keep frontend stable
+            return {
+                'total': {'months': months, 'amounts': total_monthly, 'sum': 0.0},
+                'local_sales':  {'months': months, 'amounts': local_monthly,  'sum': 0.0, 'breakdown': self._empty_breakdown()},
+                'export_sales': {'months': months, 'amounts': export_monthly, 'sum': 0.0, 'breakdown': self._empty_breakdown()},
+            }
+
         local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])])
         export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])])
-        
-        # Get analytic accounts from projects
-        local_analytic_account_ids = local_projects.mapped('analytic_account_id').ids
-        export_analytic_account_ids = export_projects.mapped('analytic_account_id').ids
-        
-        for order in sales_orders:
-            # Get order month index (0-11)
-            order_month = order.date_order.month - 1
-            
-            # Get order currency
-            order_currency = order.currency_id
-            order_date = order.date_order
-            
-            # Flag to track if the order has been categorized
-            order_categorized = False
-            
-            # First check if the order is directly linked to any local projects
-            for local_project in local_projects:
-                if hasattr(order, 'project_ids') and local_project in order.project_ids:
-                    # Convert to company currency
-                    amount_in_company_currency = order_currency._convert(
-                        order.amount_untaxed,
-                        company_currency,
-                        self.env.company,
-                        order_date
-                    )
-                    
-                    local_monthly[order_month] += amount_in_company_currency
-                    total_monthly[order_month] += amount_in_company_currency
-                    order_categorized = True
-                    break
-            
-            # If not categorized yet, check export projects
-            if not order_categorized:
-                for export_project in export_projects:
-                    if hasattr(order, 'project_ids') and export_project in order.project_ids:
-                        # Convert to company currency
-                        amount_in_company_currency = order_currency._convert(
-                            order.amount_untaxed,
-                            company_currency,
-                            self.env.company,
-                            order_date
-                        )
-                        
-                        export_monthly[order_month] += amount_in_company_currency
-                        total_monthly[order_month] += amount_in_company_currency
-                        order_categorized = True
-                        break
-            
-            # If still not categorized, check analytic distribution on order lines
-            if not order_categorized:
+
+        local_project_ids = set(local_projects.ids)
+        export_project_ids = set(export_projects.ids)
+
+        aa_to_project_id = {}
+        for pr in (local_projects | export_projects):
+            if pr.analytic_account_id:
+                aa_to_project_id[pr.analytic_account_id.id] = pr.id
+
+        project_id_to_name = {p.id: p.name for p in (local_projects | export_projects)}
+
+        for order in orders:
+            m = order.date_order.month - 1
+            cur = order.currency_id
+            dt = order.date_order
+
+            categorized = False
+            if hasattr(order, 'project_ids') and order.project_ids:
+                linked = order.project_ids
+                amt_total_ccy = cur._convert(order.amount_untaxed, company_currency, self.env.company, dt)
+                per = amt_total_ccy / max(len(linked), 1)
+
+                for pr in linked:
+                    if pr.id in local_project_ids:
+                        local_monthly[m] += per
+                        local_m_buckets[m][pr.id] += per
+                        categorized = True
+                    elif pr.id in export_project_ids:
+                        export_monthly[m] += per
+                        export_m_buckets[m][pr.id] += per
+                        categorized = True
+
+                if categorized:
+                    total_monthly[m] += amt_total_ccy
+
+            if not categorized:
                 for line in order.order_line:
-                    if line.analytic_distribution:
+                    dist = self._to_dict(line.analytic_distribution)
+                    if not dist:
+                        continue
+
+                    line_amt_ccy = cur._convert(line.price_subtotal, company_currency, self.env.company, dt)
+                    pushed = False
+                    for aa_id_str, percent in dist.items():
                         try:
-                            distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
-                                else eval(line.analytic_distribution) if isinstance(line.analytic_distribution, str) \
-                                else json.loads(line.analytic_distribution) if line.analytic_distribution else {}
-                            
-                            # Convert line amount to company currency
-                            amount_in_company_currency = order_currency._convert(
-                                line.price_subtotal,
-                                company_currency,
-                                self.env.company,
-                                order_date
-                            )
-                            
-                            line_categorized = False
-                            
-                            for account_id_str, percentage in distribution.items():
-                                account_id = int(account_id_str) if isinstance(account_id_str, str) else int(account_id_str)
-                                
-                                if account_id in local_analytic_account_ids:
-                                    local_monthly[order_month] += amount_in_company_currency
-                                    total_monthly[order_month] += amount_in_company_currency
-                                    line_categorized = True
-                                    break
-                                
-                                if not line_categorized and account_id in export_analytic_account_ids:
-                                    export_monthly[order_month] += amount_in_company_currency
-                                    total_monthly[order_month] += amount_in_company_currency
-                                    line_categorized = True
-                                    break
-                        
-                        except Exception as e:
-                            _logger.error(f"Error processing analytic distribution for order {order.id}, line {line.id}: {e}")
-        
-        # Round to 2 decimal places for currency amounts
+                            aa_id = int(aa_id_str)
+                        except Exception:
+                            continue
+                        pr_id = aa_to_project_id.get(aa_id)
+                        if not pr_id:
+                            continue
+                        share = line_amt_ccy * (float(percent) / 100.0 if percent else 1.0)
+
+                        if pr_id in local_project_ids:
+                            local_monthly[m] += share
+                            local_m_buckets[m][pr_id] += share
+                            total_monthly[m] += share
+                            pushed = True
+                        elif pr_id in export_project_ids:
+                            export_monthly[m] += share
+                            export_m_buckets[m][pr_id] += share
+                            total_monthly[m] += share
+                            pushed = True
+
+                    if not pushed and line_amt_ccy:
+                        total_monthly[m] += line_amt_ccy
+
         for i in range(12):
             total_monthly[i] = round(total_monthly[i], 2)
             local_monthly[i] = round(local_monthly[i], 2)
             export_monthly[i] = round(export_monthly[i], 2)
-        
+
+        local_breakdown = self._mk_breakdown(local_m_buckets, project_id_to_name)
+        export_breakdown = self._mk_breakdown(export_m_buckets, project_id_to_name)
+
         return {
-            'total': {
-                'months': months,
-                'amounts': total_monthly,
-                'sum': self._format_amount(sum(total_monthly)),
-            },
-            'local_sales': {
-                'months': months,
-                'amounts': local_monthly,
-                'sum': self._format_amount(sum(local_monthly)),
-            },
-            'export_sales': {
-                'months': months,
-                'amounts': export_monthly,
-                'sum': self._format_amount(sum(export_monthly)),
-            },
+            'total': {'months': months, 'amounts': total_monthly, 'sum': self._format_amount(sum(total_monthly))},
+            'local_sales':  {'months': months, 'amounts': local_monthly,  'sum': self._format_amount(sum(local_monthly)),  'breakdown': local_breakdown},
+            'export_sales': {'months': months, 'amounts': export_monthly, 'sum': self._format_amount(sum(export_monthly)), 'breakdown': export_breakdown},
         }
 
     def _get_revenue_data(self, year):
-        """
-        Calculate monthly revenue data by project type (Local vs Export) for the given year.
-        
-        This optimized implementation efficiently tracks revenue by:
-        1. Finding all relevant projects tagged as Local or Export
-        2. Identifying all sales orders linked to these projects
-        3. Calculating monthly revenue from posted invoices related to these sales orders
-        
-        Args:
-            year (int): The year for which to calculate revenue data
-            
-        Returns:
-            dict: Dictionary containing total, local and export revenue data with monthly breakdown
-        """
-        # Get month abbreviations (Jan, Feb, etc.)
-        months = [datetime(2000, i+1, 1).strftime('%b') for i in range(12)]
-        
-        # Initialize monthly arrays
-        total_monthly = [0.0] * 12
-        local_monthly = [0.0] * 12
-        export_monthly = [0.0] * 12
-        
-        # Define date range for the year
+        months = self._month_names()
+        total_monthly = self._zeros()
+        local_monthly = self._zeros()
+        export_monthly = self._zeros()
+
+        local_m_buckets = self._month_buckets()
+        export_m_buckets = self._month_buckets()
+
         start_date = f"{year}-01-01"
         end_date = f"{year}-12-31"
-        
-        # Get Local and Export tags
+
+        company = self.env.company
+        company_currency = company.currency_id
+
         local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
         export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
-        
-        # Ensure tags exist
         if not local_tag or not export_tag:
-            raise ValueError("Local or Export tags not found")
-        
-        # Get projects by tags
+            return {
+                'total': {'months': months, 'amounts': total_monthly, 'sum': 0.0},
+                'local_revenue':  {'months': months, 'amounts': local_monthly,  'sum': 0.0, 'breakdown': self._empty_breakdown()},
+                'export_revenue': {'months': months, 'amounts': export_monthly, 'sum': 0.0, 'breakdown': self._empty_breakdown()},
+            }
+
         local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])])
         export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])])
-        
-        # Get analytic accounts from projects
-        local_analytic_account_ids = local_projects.mapped('analytic_account_id').ids
-        export_analytic_account_ids = export_projects.mapped('analytic_account_id').ids
-        
-        # Get company currency
-        company_currency = self.env.company.currency_id
-        
-        # Get posted customer invoices in the date range
+
+        local_project_ids = set(local_projects.ids)
+        export_project_ids = set(export_projects.ids)
+
+        aa_to_project_id = {}
+        for pr in (local_projects | export_projects):
+            if pr.analytic_account_id:
+                aa_to_project_id[pr.analytic_account_id.id] = pr.id
+
+        project_id_to_name = {p.id: p.name for p in (local_projects | export_projects)}
+
         invoice_domain = [
             ('invoice_date', '>=', start_date),
             ('invoice_date', '<=', end_date),
             ('move_type', '=', 'out_invoice'),
             ('state', '=', 'posted'),
-            ('company_id', '=', self.env.company.id),
+            ('company_id', '=', company.id),
         ]
         customer_invoices = self.env['account.move'].search(invoice_domain)
-        
-        for invoice in customer_invoices:
-            # Get invoice currency
-            invoice_currency = invoice.currency_id
-            invoice_date = invoice.invoice_date or invoice.date
-            
-            # Get invoice month index (0-11)
-            invoice_month = invoice_date.month - 1
-            
-            for line in invoice.invoice_line_ids:
-                if line.analytic_distribution:
+
+        for inv in customer_invoices:
+            inv_currency = inv.currency_id
+            inv_date = inv.invoice_date or inv.date
+            month_idx = (inv_date.month - 1) if inv_date else 0
+
+            for line in inv.invoice_line_ids:
+                dist = self._to_dict(line.analytic_distribution)
+                if not dist:
+                    amount_ccy = inv_currency._convert(line.price_subtotal, company_currency, company, inv_date)
+                    total_monthly[month_idx] += amount_ccy
+                    continue
+
+                vals = list(dist.values())
+                sum_vals = sum(float(v) for v in vals) if vals else 0.0
+                percent_mode = sum_vals > 1.01
+
+                pushed_any = False
+                for aa_id_str, share in dist.items():
                     try:
-                        distribution = line.analytic_distribution
-                        if not isinstance(distribution, dict):
-                            distribution = json.loads(distribution) if distribution else {}
-                        
-                        for account_id_str, percentage in distribution.items():
-                            account_id = int(account_id_str)
-                            
-                            # Convert line amount to company currency
-                            amount_in_company_currency = invoice_currency._convert(
-                                line.price_subtotal,
-                                company_currency,
-                                self.env.company,
-                                invoice_date
-                            )
-                            
-                            if account_id in local_analytic_account_ids:
-                                local_monthly[invoice_month] += amount_in_company_currency
-                                total_monthly[invoice_month] += amount_in_company_currency
-                                break
-                                
-                            if account_id in export_analytic_account_ids:
-                                export_monthly[invoice_month] += amount_in_company_currency
-                                total_monthly[invoice_month] += amount_in_company_currency
-                                break
-                    
-                    except Exception as e:
-                        _logger.error("Error processing analytic distribution for invoice %s, line %s: %s", 
-                                    invoice.id, line.id, str(e))
-        
-        # Round to 2 decimal places for currency amounts
+                        aa_id = int(aa_id_str)
+                    except Exception:
+                        continue
+
+                    pr_id = aa_to_project_id.get(aa_id)
+                    if not pr_id:
+                        continue
+
+                    amount_ccy = inv_currency._convert(line.price_subtotal, company_currency, company, inv_date)
+                    part = amount_ccy * (float(share) / 100.0 if percent_mode else float(share or 1.0))
+
+                    if pr_id in local_project_ids:
+                        local_monthly[month_idx] += part
+                        local_m_buckets[month_idx][pr_id] += part
+                        total_monthly[month_idx] += part
+                        pushed_any = True
+                    elif pr_id in export_project_ids:
+                        export_monthly[month_idx] += part
+                        export_m_buckets[month_idx][pr_id] += part
+                        total_monthly[month_idx] += part
+                        pushed_any = True
+
+                if not pushed_any:
+                    amount_ccy = inv_currency._convert(line.price_subtotal, company_currency, company, inv_date)
+                    total_monthly[month_idx] += amount_ccy
+
         for i in range(12):
             total_monthly[i] = round(total_monthly[i], 2)
             local_monthly[i] = round(local_monthly[i], 2)
             export_monthly[i] = round(export_monthly[i], 2)
-        
+
+        local_breakdown = self._mk_breakdown(local_m_buckets, project_id_to_name)
+        export_breakdown = self._mk_breakdown(export_m_buckets, project_id_to_name)
+
         return {
-            'total': {
-                'months': months,
-                'amounts': total_monthly,
-                'sum': self._format_amount(sum(total_monthly)),
-            },
-            'local_revenue': {
-                'months': months,
-                'amounts': local_monthly,
-                'sum': self._format_amount(sum(local_monthly)),
-            },
-            'export_revenue': {
-                'months': months,
-                'amounts': export_monthly,
-                'sum': self._format_amount(sum(export_monthly)),
-            },
+            'total': {'months': months, 'amounts': total_monthly, 'sum': self._format_amount(sum(total_monthly))},
+            'local_revenue':  {'months': months, 'amounts': local_monthly,  'sum': self._format_amount(sum(local_monthly)),  'breakdown': local_breakdown},
+            'export_revenue': {'months': months, 'amounts': export_monthly, 'sum': self._format_amount(sum(export_monthly)), 'breakdown': export_breakdown},
         }
-        
+
     def _get_expenses_data(self, year):
-        """Calculate expenses data"""
-        # Get month abbreviations (Jan, Feb, etc.)
-        months = [datetime(2000, i+1, 1).strftime('%b') for i in range(12)]
+        months = self._month_names()
+        total_monthly = self._zeros()
+        local_monthly = self._zeros()
+        export_monthly = self._zeros()
 
-        # Initialize monthly arrays
-        total_monthly = [0.0] * 12
-        local_monthly = [0.0] * 12
-        export_monthly = [0.0] * 12
+        # NEW: per-month, per-project buckets for the tooltip
+        local_m_buckets = self._month_buckets()
+        export_m_buckets = self._month_buckets()
 
-        # Define date range for the year
         start_date = f"{year}-01-01"
         end_date = f"{year}-12-31"
 
-        # Get Local and Export tags
+        company = self.env.company
+        company_currency = company.currency_id
+
         local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
         export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
-
-        # Ensure tags exist
         if not local_tag or not export_tag:
-            raise ValueError("Local or Export tags not found")
+            return {
+                'total': {'months': months, 'amounts': total_monthly, 'sum': 0.0},
+                'local_expenses':  {'months': months, 'amounts': local_monthly,  'sum': 0.0, 'breakdown': self._empty_breakdown()},
+                'export_expenses': {'months': months, 'amounts': export_monthly, 'sum': 0.0, 'breakdown': self._empty_breakdown()},
+            }
 
-        # Local Projects
+        # Find projects by tag (Local / Export)
         local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])])
-        
-        # Export Projects
         export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])])
-        
-        # Get analytic accounts from projects
-        local_analytic_account_ids = local_projects.mapped('analytic_account_id').ids
-        export_analytic_account_ids = export_projects.mapped('analytic_account_id').ids
 
-        # Get company currency
-        company_currency = self.env.company.currency_id
+        local_project_ids = set(local_projects.ids)
+        export_project_ids = set(export_projects.ids)
 
-        # Get confirmed vendor bills within the date range
-        domain = [
+        # Map analytic account -> project, and project -> name (for tooltip rows)
+        aa_to_project_id = {}
+        for pr in (local_projects | export_projects):
+            if pr.analytic_account_id:
+                aa_to_project_id[pr.analytic_account_id.id] = pr.id
+        project_id_to_name = {p.id: p.name for p in (local_projects | export_projects)}
+
+        vendor_bills = self.env['account.move'].search([
             ('move_type', '=', 'in_invoice'),
             ('state', '=', 'posted'),
             ('invoice_date', '>=', start_date),
             ('invoice_date', '<=', end_date),
-            ('company_id', '=', self.env.company.id),
-        ]
-        vendor_bills = self.env['account.move'].search(domain)
-        
+            ('company_id', '=', company.id),
+        ])
+
         for bill in vendor_bills:
-            # Get bill currency
             bill_currency = bill.currency_id
             bill_date = bill.invoice_date or bill.date
-            
-            # Get bill month index (0-11)
-            bill_month = bill_date.month - 1
-            
-            for line in bill.line_ids:
-                # Ensure analytic distribution exists and is processed correctly
-                if line.analytic_distribution:
-                    # Handle different analytic distribution formats
+            m = (bill_date.month - 1) if bill_date else 0
+
+            # Use invoice lines (vendor bill product lines)
+            for line in bill.invoice_line_ids:
+                dist = self._to_dict(line.analytic_distribution)
+                amount_ccy = bill_currency._convert(line.price_subtotal, company_currency, company, bill_date)
+
+                # If no distribution → not classifiable; still count towards TOTAL
+                if not dist:
+                    if amount_ccy:
+                        total_monthly[m] += amount_ccy
+                    continue
+
+                vals = list(dist.values())
+                sum_vals = sum(float(v) for v in vals) if vals else 0.0
+                percent_mode = sum_vals > 1.01  # same heuristic as revenue
+
+                pushed_any = False
+                for aa_id_str, share in dist.items():
                     try:
-                        # Convert to dictionary if it's a string
-                        distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
-                            else eval(line.analytic_distribution)
-                        
-                        # Check each analytic account in the distribution
-                        for account_id_str, percentage in distribution.items():
-                            account_id = int(account_id_str)  # Ensure integer
+                        aa_id = int(aa_id_str)
+                    except Exception:
+                        continue
 
-                            # Convert line amount to company currency
-                            amount_in_company_currency = bill_currency._convert(
-                                line.price_subtotal,
-                                company_currency,
-                                self.env.company,
-                                bill_date
-                            )
+                    pr_id = aa_to_project_id.get(aa_id)
+                    # If AA isn’t tied to a project we know, skip (but still add to TOTAL later)
+                    if not pr_id:
+                        continue
 
-                            # Check if the account is in local or export project accounts
-                            if account_id in local_analytic_account_ids:
-                                local_monthly[bill_month] += amount_in_company_currency
-                                total_monthly[bill_month] += amount_in_company_currency
-                            
-                            if account_id in export_analytic_account_ids:
-                                export_monthly[bill_month] += amount_in_company_currency
-                                total_monthly[bill_month] += amount_in_company_currency
-                    
-                    except Exception as e:
-                        # Log any errors in processing analytic distribution
-                        _logger.error(f"Error processing analytic distribution for bill {bill.id}, line {line.id}: {e}")
+                    part = amount_ccy * (float(share) / 100.0 if percent_mode else float(share or 1.0))
 
-        # Round to 2 decimal places for currency amounts
+                    if pr_id in local_project_ids:
+                        local_monthly[m] += part
+                        local_m_buckets[m][pr_id] += part  # <- for tooltip
+                        total_monthly[m] += part
+                        pushed_any = True
+                    elif pr_id in export_project_ids:
+                        export_monthly[m] += part
+                        export_m_buckets[m][pr_id] += part  # <- for tooltip
+                        total_monthly[m] += part
+                        pushed_any = True
+
+                # If distribution existed but none of its AAs mapped to our Local/Export projects,
+                # still count the whole line to TOTAL to avoid losing amounts.
+                if not pushed_any and amount_ccy:
+                    total_monthly[m] += amount_ccy
+
+        # Round month sums
         for i in range(12):
             total_monthly[i] = round(total_monthly[i], 2)
             local_monthly[i] = round(local_monthly[i], 2)
             export_monthly[i] = round(export_monthly[i], 2)
 
+        # Build per-month project arrays for the tooltip
+        local_breakdown = self._mk_breakdown(local_m_buckets, project_id_to_name)
+        export_breakdown = self._mk_breakdown(export_m_buckets, project_id_to_name)
+
         return {
-            'total': {
-                'months': months,
-                'amounts': total_monthly,
-                'sum': self._format_amount(sum(total_monthly)),
-            },
-            'local_expenses': {  # Fixed the typo in 'local_exenses'
+            'total': {'months': months, 'amounts': total_monthly, 'sum': self._format_amount(sum(total_monthly))},
+            'local_expenses':  {
                 'months': months,
                 'amounts': local_monthly,
                 'sum': self._format_amount(sum(local_monthly)),
+                'breakdown': local_breakdown,        # <-- NEW
             },
             'export_expenses': {
                 'months': months,
                 'amounts': export_monthly,
                 'sum': self._format_amount(sum(export_monthly)),
-            },
+                'breakdown': export_breakdown,       # <-- NEW
+            }
         }
 
     def _get_cashflow_data(self, year):
-        """Calculate cash flow data for the given year"""
-        months = [datetime(2000, i + 1, 1).strftime('%b') for i in range(12)]
+        months = self._month_names()
 
-        inflow_total = [0.0] * 12
-        outflow_total = [0.0] * 12
-
-        inflow_local = [0.0] * 12
-        outflow_local = [0.0] * 12
-
-        inflow_export = [0.0] * 12
-        outflow_export = [0.0] * 12
+        inflow_total = self._zeros()
+        outflow_total = self._zeros()
+        inflow_local = self._zeros()
+        outflow_local = self._zeros()
+        inflow_export = self._zeros()
+        outflow_export = self._zeros()
 
         start_date = f'{year}-01-01'
         end_date = f'{year}-12-31'
-        
-        # Get company currency
+
         company_currency = self.env.company.currency_id
-        
-        # Get project tags
+
         local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
         export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
-        
-        # Get projects by tags
-        local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])])
-        export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])])
-        
-        # Get analytic accounts
-        local_analytic_account_ids = local_projects.mapped('analytic_account_id').ids
-        export_analytic_account_ids = export_projects.mapped('analytic_account_id').ids
-        
-        # INFLOW: Customer Payments
+        if not local_tag or not export_tag:
+            return {
+                'total': {'months': months, 'inflow': inflow_total, 'outflow': outflow_total,
+                          'sum': self._format_amount(0.0)},
+                'local_cash_flow':  {'months': months, 'inflow': inflow_local,  'outflow': outflow_local,
+                                     'sum': self._format_amount(0.0)},
+                'export_cash_flow': {'months': months, 'inflow': inflow_export, 'outflow': outflow_export,
+                                     'sum': self._format_amount(0.0)},
+            }
+
+        local_analytic_account_ids = set(self.env['project.project']
+                                         .search([('tag_ids', 'in', [local_tag.id])])
+                                         .mapped('analytic_account_id').ids)
+        export_analytic_account_ids = set(self.env['project.project']
+                                          .search([('tag_ids', 'in', [export_tag.id])])
+                                          .mapped('analytic_account_id').ids)
+
+        # Inflow: inbound payments reconciled with invoices
         customer_payments = self.env['account.payment'].search([
             ('payment_type', '=', 'inbound'),
             ('state', '=', 'posted'),
             ('date', '>=', start_date),
             ('date', '<=', end_date)
         ])
-        
         for payment in customer_payments:
-            # Get payment month index (0-11)
             payment_month = payment.date.month - 1
-            
-            # Get related invoice
-            invoices = payment.reconciled_invoice_ids
-            
-            for invoice in invoices:
-                # Get invoice currency
-                invoice_currency = invoice.currency_id
-                invoice_date = invoice.invoice_date or invoice.date
-                
+            for invoice in payment.reconciled_invoice_ids:
+                inv_currency = invoice.currency_id
+                inv_date = invoice.invoice_date or invoice.date
                 for line in invoice.invoice_line_ids:
-                    if line.analytic_distribution:
+                    dist = self._to_dict(line.analytic_distribution)
+                    if not dist:
+                        continue
+                    amount_ccy = inv_currency._convert(line.price_subtotal, company_currency, self.env.company, inv_date)
+                    for account_id_str in dist.keys():
                         try:
-                            distribution = line.analytic_distribution
-                            if not isinstance(distribution, dict):
-                                distribution = json.loads(distribution) if distribution else {}
-                            
-                            for account_id_str, percentage in distribution.items():
-                                account_id = int(account_id_str)
-                                
-                                # Convert line amount to company currency
-                                amount_in_company_currency = invoice_currency._convert(
-                                    line.price_subtotal,
-                                    company_currency,
-                                    self.env.company,
-                                    invoice_date
-                                )
-                                
-                                if account_id in local_analytic_account_ids:
-                                    inflow_local[payment_month] += amount_in_company_currency
-                                    inflow_total[payment_month] += amount_in_company_currency
-                                    break
-                                elif account_id in export_analytic_account_ids:
-                                    inflow_export[payment_month] += amount_in_company_currency
-                                    inflow_total[payment_month] += amount_in_company_currency
-                                    break
+                            account_id = int(account_id_str)
+                        except Exception:
+                            continue
+                        if account_id in local_analytic_account_ids:
+                            inflow_local[payment_month] += amount_ccy
+                            inflow_total[payment_month] += amount_ccy
+                            break
+                        if account_id in export_analytic_account_ids:
+                            inflow_export[payment_month] += amount_ccy
+                            inflow_total[payment_month] += amount_ccy
+                            break
 
-                        except Exception as e:
-                            _logger.error("Error processing analytic distribution for invoice %s, line %s: %s", 
-                                        invoice.id, line.id, str(e))
-            
-        # OUTFLOW: Vendor Payments
+        # Outflow: outbound payments reconciled with bills
         vendor_payments = self.env['account.payment'].search([
             ('payment_type', '=', 'outbound'),
             ('state', '=', 'posted'),
             ('date', '>=', start_date),
             ('date', '<=', end_date)
         ])
-        
         for payment in vendor_payments:
-            # Get payment month index (0-11)
             payment_month = payment.date.month - 1
-            
-            # Get related bill
-            bills = payment.reconciled_bill_ids
-
-            for bill in bills:
-                # Get bill currency
+            for bill in payment.reconciled_bill_ids:
                 bill_currency = bill.currency_id
                 bill_date = bill.invoice_date or bill.date
-                
                 for line in bill.invoice_line_ids:
-                    if line.analytic_distribution:
+                    dist = self._to_dict(line.analytic_distribution)
+                    if not dist:
+                        continue
+                    amount_ccy = bill_currency._convert(line.price_subtotal, company_currency, self.env.company, bill_date)
+                    for account_id_str in dist.keys():
                         try:
-                            distribution = line.analytic_distribution
-                            if not isinstance(distribution, dict):
-                                distribution = json.loads(distribution) if distribution else {}
-                            
-                            for account_id_str, percentage in distribution.items():
-                                account_id = int(account_id_str)
-                                
-                                # Convert line amount to company currency
-                                amount_in_company_currency = bill_currency._convert(
-                                    line.price_subtotal,
-                                    company_currency,
-                                    self.env.company,
-                                    bill_date
-                                )
-                                
-                                if account_id in local_analytic_account_ids:
-                                    outflow_local[payment_month] += amount_in_company_currency
-                                    outflow_total[payment_month] += amount_in_company_currency
-                                    break
-                                elif account_id in export_analytic_account_ids:
-                                    outflow_export[payment_month] += amount_in_company_currency
-                                    outflow_total[payment_month] += amount_in_company_currency
-                                    break
-                                                    
-                        except Exception as e:
-                            _logger.error("Error processing analytic distribution for bill %s, line %s: %s", 
-                                        bill.id, line.id, str(e))
+                            account_id = int(account_id_str)
+                        except Exception:
+                            continue
+                        if account_id in local_analytic_account_ids:
+                            outflow_local[payment_month] += amount_ccy
+                            outflow_total[payment_month] += amount_ccy
+                            break
+                        if account_id in export_analytic_account_ids:
+                            outflow_export[payment_month] += amount_ccy
+                            outflow_total[payment_month] += amount_ccy
+                            break
 
         return {
             'total': {
-                'months': months,
-                'inflow': inflow_total,
-                'outflow': outflow_total,
+                'months': months, 'inflow': inflow_total, 'outflow': outflow_total,
                 'sum': self._format_amount(sum(inflow_total) - sum(outflow_total)),
             },
             'local_cash_flow': {
-                'months': months,
-                'inflow': inflow_local,
-                'outflow': outflow_local,
+                'months': months, 'inflow': inflow_local, 'outflow': outflow_local,
                 'sum': self._format_amount(sum(inflow_local) - sum(outflow_local)),
             },
             'export_cash_flow': {
-                'months': months,
-                'inflow': inflow_export,
-                'outflow': outflow_export,
+                'months': months, 'inflow': inflow_export, 'outflow': outflow_export,
                 'sum': self._format_amount(sum(inflow_export) - sum(outflow_export)),
             },
         }
