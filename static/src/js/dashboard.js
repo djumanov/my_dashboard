@@ -101,12 +101,12 @@ export class Dashboard extends Component {
                         align: 'center'
                     },
                     point: {
-                    events: {
-                        click: function () {
-                            window.open("/web#action=my_dashboard.action_l2_dashboard", "_blank");
+                        events: {
+                            click: function () {
+                                window.location.href = "/web#action=my_dashboard.action_l2_dashboard";
+                            }
                         }
                     }
-                }
                 }
             },
             series: [{
@@ -189,6 +189,13 @@ export class Dashboard extends Component {
                             fontSize: '12px',
                             fontWeight: 'bold',
                             color: '#000'
+                        }
+                    },
+                    point: {
+                        events: {
+                            click: function () {
+                                window.location.href = "/web#action=my_dashboard.action_l2_dashboard";
+                            }
                         }
                     }
                 }

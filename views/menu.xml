@@ -3,9 +3,16 @@
     <!-- Main Menu -->
     <menuitem id="menu_l1_dashboard_root"
               name="DrukSmart Dashboard"
-              web_icon="l1_dashboard,static/description/icon.png"
               action="action_l1_dashboard"
-              sequence="90"/>
+              sequence="90"
+              web_icon="my_dashboard,static/description/icon.svg"/>
+
+    <!-- HR menu -->
+    <menuitem id="menu_hr_dashboard"
+              name="Human Resources"
+              parent="menu_l1_dashboard_root"
+              action="action_hr_dashboard"
+              sequence="9"/>
 
     <!-- Sale Target Menu -->
     <menuitem id="menu_l1_sale_target"

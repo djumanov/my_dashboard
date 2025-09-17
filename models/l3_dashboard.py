@@ -67,12 +67,13 @@ class L3Dashboard(models.Model):
             ('state', 'in', ('sale', 'done')),  # Only confirmed/done SO's
         ])
 
+        company_currency = self.env.company.currency_id
+
         # Filter orders that have lines with our analytic account
         po_value = 0.0
         for order in sale_orders:
             if hasattr(project, 'sale_order_id') and project.sale_order_id:
                 if project.sale_order_id == order:
-                    company_currency = self.env.company.currency_id
                     po_value += order.currency_id._convert(order.amount_untaxed, company_currency, self.env.company, order.date_order)
                     # po_value += order.amount_untaxed
         
@@ -109,6 +110,10 @@ class L3Dashboard(models.Model):
                             if account_id == account.id:
                                 # Calculate the allocated amount based on percentage
                                 allocated_amount = line.price_subtotal
+
+                                # convert amount
+                                if invoice.currency_id != company_currency:
+                                    allocated_amount = invoice.currency_id._convert(allocated_amount, company_currency, self.env.company, invoice.date)
                                 
                                 # For customer invoices, add to invoiced total
                                 invoiced += allocated_amount
@@ -143,7 +148,6 @@ class L3Dashboard(models.Model):
         domain = [
             ('move_type', '=', 'in_invoice'),
             ('state', '=', 'posted'),
-            ('payment_state', '=', 'paid'),
             ('company_id', '=', self.env.company.id), 
         ]
         vendor_bills = self.env['account.move'].search(domain)
@@ -165,6 +169,11 @@ class L3Dashboard(models.Model):
                                 if account_id == account.id:
                                     # Calculate the allocated amount based on percentage
                                     allocated_amount = line.price_subtotal
+
+                                    # convert amount
+                                    if bill.currency_id != company_currency:
+                                        allocated_amount = bill.currency_id._convert(allocated_amount, company_currency, self.env.company, bill.date)
+
                                     vendor_invoice += allocated_amount
                                     
                                     # Check if the bill is paid
@@ -180,8 +189,8 @@ class L3Dashboard(models.Model):
                                         "pending_collection": 0.0,
                                         "outstanding_aging": 0,
                                         "vendor_invoice": allocated_amount,
-                                        "payment_made": allocated_amount if bill.payment_state != 'not_paid' else 0.0,
-                                        "payment_to_be_made": allocated_amount if bill.payment_state != 'not_paid' else 0.0,
+                                        "payment_made": allocated_amount if bill.payment_state == 'paid' else 0.0,
+                                        "payment_to_be_made": allocated_amount if bill.payment_state == 'not_paid' else 0.0,
                                     }
                                     if line.id not in processes_lines:
                                         milestones.append(milestone_data)

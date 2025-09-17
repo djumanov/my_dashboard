@@ -1,0 +1,58 @@
+/* dash.scss — shared dashboard styles (no @import) */
+$font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+$bg-page: #f8fafc;
+$bg-card: #fff;
+$txt: #1f2937;
+$muted: #6b7280;
+$border: #e5e7eb;
+$shadow: 0 10px 20px rgba(2, 6, 23, .06);
+$radius-xl: 1rem;
+$radius-2xl: 1.25rem;
+$accent: #f7b500;
+$accent-emph: #fff9e6;
+$danger: #dc3545;
+$success: #16a34a;
+$info: #0ea5e9;
+
+.dash{
+  font-family:$font-family;font-size:13px;color:$txt;background:$bg-page;padding:1.5rem;
+  &__header{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;
+    h1{font-size:1.5rem;font-weight:700;margin:0;color:$txt}
+    .badge{background:$accent;color:#111;font-weight:700;border-radius:.5rem;padding:.25rem .5rem;font-size:.75rem}
+  }
+  &__filters{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem;
+    .filter{min-width:180px;border:1px solid $border;border-radius:.5rem;padding:.375rem .5rem;background:#fff;font-size:13px}
+    .search{flex:1 1 280px;
+      .input-group-text{background:#f3f4f6;border:1px solid $border}
+      .form-control{border:1px solid $border}
+    }
+  }
+  .card{background:$bg-card;border-radius:$radius-2xl;box-shadow:$shadow;overflow:hidden;
+    &--section{
+      .card-title{background:$accent;color:#111;font-weight:700;padding:.5rem .75rem;font-size:.9rem}
+      .card-body{padding:.75rem}
+    }
+  }
+  .table-wrap{overflow:auto;max-height:640px;border:1px solid $border;border-radius:$radius-xl}
+  .dash-table{
+    width:100%;border-collapse:collapse;margin:0;
+    thead th{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid $border;border-right:1px solid $border;font-weight:700;font-size:13.5px;color:#374151;padding:.6rem .6rem;text-align:center}
+    tbody td,tfoot td{border-top:1px solid $border;border-right:1px solid $border;padding:.6rem .6rem;text-align:center;vertical-align:middle}
+    tbody tr:hover{background:#f5f5f5;transition:background-color .15s}
+    tfoot{background:$accent-emph;font-weight:700;td:first-child{color:#0f766e}}
+    .sticky-col{position:sticky;left:0;z-index:6;background:inherit}
+    .text-end{text-align:right}.text-start{text-align:left}
+    .text-danger{color:$danger;font-weight:600}
+    .text-success{color:$success;font-weight:700}
+    .fw-bold{font-weight:700}
+    .bg-accent{background:$accent-emph}
+    .muted{color:$muted}
+  }
+  .badge-info{background:$info;color:#fff}
+  .badge-success{background:#10b981;color:#fff}
+  .form-control,.form-select{font-size:13px;padding:.375rem .5rem}
+}
+
+/* Empty namespaces for page-specific tweaks if needed */
+.l3-dashboard{}
+.l4-dashboard{}

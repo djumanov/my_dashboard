@@ -315,9 +315,9 @@ export class L2Dashboard extends Component {
           events: { 
             mouseLeave: () => this._hideExtTip(),
             click: function () {
-                window.open("/web#action=my_dashboard.action_l4_dashboard", "_blank");
+              window.location.href = "/web#action=my_dashboard.action_l4_dashboard";
             }
-        },
+          },
         },
         plotOptions: {
           bar: {
@@ -392,6 +392,7 @@ export class L2Dashboard extends Component {
       };
     };
 
+    // UPDATED: custom tooltip that shows monthly totals for area chart
     const areaOpts = (title, data, yMax) => {
       const months = Array.isArray(data?.months) ? data.months.map((m) => m ?? "-") : [];
       const inflow = Array.isArray(data?.inflow) ? data.inflow.map((v) => Number(v) || 0) : [];
@@ -416,11 +417,24 @@ export class L2Dashboard extends Component {
         tooltip: {
           shared: true,
           intersect: false,
-          y: { formatter: (val) => this.formatNumber(val) },
-          custom: () => {
-            this._hideExtTip();
-            // IMPORTANT: ApexCharts expects a string; never return undefined.
-            return '<div></div>';
+          // Show our external tooltip with Inflow/Outflow/Net/Sum
+          custom: ({ dataPointIndex, w }) => {
+            const label = months[dataPointIndex] ?? "";
+            const infl  = inflow[dataPointIndex] ?? 0;
+            const out   = outflow[dataPointIndex] ?? 0;
+            const net   = infl - out;
+            const sum   = infl + out;
+
+            const x = w?.globals?.clientX ?? 0;
+            const y = w?.globals?.clientY ?? 0;
+
+            const html = `
+              <div class="l2-head">${label}</div>
+              <div class="l2-row"><span><span class="l2-dot" style="background:#1e90ff"></span>Inflow</span><b>${this.formatNumber(infl)}</b></div>
+              <div class="l2-row"><span><span class="l2-dot" style="background:#ff4d4f"></span>Outflow</span><b>${this.formatNumber(out)}</b></div>
+            `;
+            this._showExtTip(html, x, y);
+            return '<div></div>'; // keep native tooltip hidden; use external
           },
         },
         xaxis: {

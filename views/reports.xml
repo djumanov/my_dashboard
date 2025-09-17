@@ -4,7 +4,7 @@
         <field name="name">druksmart_dashboard.reports.form.no_title</field>
         <field name="model">druksmart_dashboard.reports</field>
         <field name="arch" type="xml">
-            <form string="DrukSmart Dashboard" class="dashboard-form" create="0" edit="0" style="position: relative;">
+            <form string="DrukSmart Dashboard" class="dashboard-form" create="0" edit="1" style="position: relative;">
                 <style>
                     .o_control_panel {
                         border-bottom: 0;
@@ -19,21 +19,39 @@
                     }
                 </style>
                 <div class="o_form_view_container" style="width: 90%; margin: auto;">
-                    <!-- Header section with Dashboard title on the left and filters on the right -->
-                    <div class="row align-items-center mt-3 mb-2">
-                        
-                        <!-- Left side (Dashboard Title) -->
-                        <div class="col-md-6 col-sm-12 text-start">
-                            <h1 class="my-0" style="text-align: right;">
-                                <field name="category"/>
-                            </h1>
+
+                    <!-- Header: Dashboard Title (left) + Filters (right) -->
+                    <div class="row align-items-center bg-light rounded shadow-sm px-4 py-3 mb-4">
+
+                        <!-- Title Section -->
+                        <div class="col-md-6 text-start">
+                            <h2 class="mb-0 text-primary fw-semibold" style="font-size: 1.5rem;">
+                                <!-- <field name="category"/> -->
+                                <field name="category" invisible="1"/>
+                            </h2>
                         </div>
 
-                        <!-- Right side (Filters) -->
-                        <div class="col-md-6 col-sm-12 d-flex flex-wrap justify-content-center justify-content-start" style="gap: 10px; text-align: center;">
-                            <field name="year" placeholder="Select Year" class="mx-1 my-1"/>
-                            <field name="month" placeholder="Select Month" class="mx-1 my-1"/>
-                            <field name="quarter" placeholder="Select Quarter" class="mx-1 my-1"/>
+                        <!-- Filters Section -->
+                        <div class="col-12 d-flex align-items-end justify-content-end gap-3 flex-wrap">
+
+                            <div style="min-width: 180px;">
+                                <span class="text-muted small d-block">Year</span>
+                                <field name="year" class="form-control form-control-sm"/>
+                            </div>
+
+                            <div style="min-width: 180px;">
+                                <span class="text-muted small d-block">Month</span>
+                                <field name="month" class="form-control form-control-sm"/>
+                            </div>
+
+                            <div style="min-width: 180px;">
+                                <span class="text-muted small d-block">Quarter</span>
+                                <field name="quarter" class="form-control form-control-sm"/>
+                            </div>
+
+                            <div class="align-self-end d-flex gap-2">
+                                <button name="export_excel" type="object" string="Download Excel" class="btn btn-sm btn-primary" style="min-width: 160px;" />
+                            </div>
                         </div>
 
                     </div>
@@ -41,7 +59,8 @@
                     <!-- Last update info aligned to right -->
                     <div class="row mb-3">
                         <div class="col-12 text-end pe-3">
-                            <span>Last update: <field name="last_update" readonly="1" class="d-inline"/></span>
+                            <span>Last update: <field name="last_update" readonly="1" class="d-inline"/>
+                            </span>
                         </div>
                     </div>
 

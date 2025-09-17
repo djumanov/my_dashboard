@@ -1,65 +1,94 @@
 .l3-dashboard {
-    background: #fff;
-    padding: 1.5rem;
-  
-    .header {
-      background: #f7b500;
-      padding: 10px 20px;
-      font-weight: bold;
+  @extend .dash;
+  background: #fff;
+  padding: 1.5rem;
+
+  // ==== Brand tokens ====
+  $brand-blue: #1263a3; // <-- put your DrunkSmark blue here
+  $brand-blue-weak: rgba(18, 99, 163, 0.12);
+
+  .dash__header h1 {
+    margin: 0;
+    line-height: 1.15;
+  }
+  .badge {
+    background: $brand-blue;
+    color: #fff;
+    border-radius: 12px;
+    padding: 2px 10px;
+    font-weight: 600;
+  }
+
+  .card {
+    border-radius: 1rem;
+    box-shadow: 0 6px 18px rgba(0,0,0,.06);
+    overflow: hidden;
+
+    .card-title {
+      background: $brand-blue;           // was yellow
+      color: #fff;
+      padding: .6rem .8rem;
+      font-weight: 700;
+      border-bottom: 1px solid $brand-blue;
     }
-  
-    .filters {
-      margin: 10px 0;
-      display: flex;
-      gap: 10px;
-  
-      .filter-input {
-        border: 1px solid #ccc;
-        padding: 5px 10px;
-        border-radius: 3px;
-      }
+  }
+
+  .table-wrap { overflow: auto; max-height: 600px; }
+
+  .dash-table {
+    width: 100%;
+    border-collapse: collapse;
+
+    thead th {
+      position: sticky; top: 0;
+      background: $brand-blue;           // was yellow
+      color: #fff;
+      border-bottom: 1px solid $brand-blue;
+      padding: 8px 10px;
+      font-weight: 700;
+      white-space: nowrap;
     }
-  
-    .report-section {
-      .sub-header {
-        background-color: #0097a7;
-        color: white;
-        padding: 8px;
-        font-weight: bold;
-      }
-  
-      .report-table {
-        width: 100%;
-        border-collapse: collapse;
-  
-        th, td {
-          padding: 6px 10px;
-          border: 1px solid #ccc;
-        }
-  
-        .bg-yellow {
-          background-color: #ffc107;
-        }
-  
-        .text-red {
-          color: red;
-        }
-  
-        .fw-bold {
-          font-weight: bold;
-          background: #f9f9f9;
-        }
-      }
+    tbody td, tbody th {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e8eef5;
     }
 
-    .table th {
-      border: 1px solid #000 !important;
-      vertical-align: middle;
+    td.col-date,
+    th.col-date {
+      padding-left: calc(10px + 0.5cm);
+      padding-right: calc(10px + 0.5cm);
     }
 
-    .table th {
-      background-color: #ffc107 !important;
-      color: #000;
-      font-weight: bold;
+    .sticky-col { position: sticky; left: 0; background: #fff; z-index: 1; }
+    .bg-accent { background: $brand-blue-weak; }
+    .text-danger { color: #d14343 !important; }
+    .fw-bold { font-weight: 700; }
+    .text-end { text-align: right; }
+    .text-start { text-align: left; }
+  }
+
+  .small.muted { color: #6b7280; }
+}
+
+/* 4-column label/value grid like the Excel screenshot */
+.l3-dashboard {
+  .dash-table.info-grid {
+    colgroup { /* optional if you want fixed widths */
+      col:nth-child(1) { width: 220px; }
+      col:nth-child(2) { width: 28%; }
+      col:nth-child(3) { width: 180px; }
+      col:nth-child(4) { width: auto; }
     }
+
+    tbody th {
+      background: #f5f8fc;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    tbody tr:nth-child(odd) td,
+    tbody tr:nth-child(odd) th {
+      background: #fafcff; /* subtle zebra like the sheet */
+    }
+  }
 }

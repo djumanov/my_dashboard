@@ -375,25 +375,25 @@ class L4Dashboard(models.Model):
             
         # Total value from sale order
         company_currency = self.env.company.currency_id
-        data["po_value"] = sale_order.currency_id._convert(sale_order.amount_untaxed, company_currency, self.env.company, sale_order.date_order)
-        
-        # Calculate invoiced amount
-        invoices = self._get_project_invoices(project, project_sales_orders, start_date, end_date)
-        data["invoiced"] = sum(invoices.mapped('amount_untaxed_signed'))
-        # s = 0
-        # for invoice in invoices:
-        #     inv_date = invoice.invoice_date or invoice.date
-        #     amount_ccy = invoice.amount_untaxed_signed, company_currency
-        #     s += amount_ccy
 
-        # data["invoiced"] = s
+        for so in project_sales_orders:
+            if so.currency_id != company_currency:
+                data["po_value"] += so.currency_id._convert(so.amount_untaxed, company_currency, self.env.company, so.date_order)
+            else:
+                data["po_value"] += so.amount_untaxed
         
-        # Calculate collected amount (paid invoices)
-        collected_invoices = invoices.filtered(
-            lambda inv: inv.payment_state in ['paid', 'in_payment']
-        )
-        data["collected"] = sum(collected_invoices.mapped('amount_untaxed_signed'))
+        data["invoiced"] = 0.0
+        for so in project_sales_orders:
+            data["invoiced"] += sum(so.invoice_ids.mapped('amount_untaxed_signed'))
         
+        data["collected"] = 0.0
+        for so in project_sales_orders:
+            invoices = so.invoice_ids.filtered(lambda inv: inv.state not in ['draft', 'cancel'])
+            collected_invoices = invoices.filtered(
+                lambda inv: inv.payment_state in ['paid', 'in_payment']
+            )
+            data["collected"] += sum(collected_invoices.mapped('amount_untaxed_signed'))
+
         # Calculate pending collection
         data["pending_collection"] = data["invoiced"] - data["collected"]
         
@@ -427,59 +427,8 @@ class L4Dashboard(models.Model):
             data["margin_percent"] = 0.0
         
         return self._format_project_data(data)
-        
-    def _get_project_invoices(self, project, sale_orders, start_date, end_date):
-        """Get customer invoices related to a project
-        
-        Args:
-            project: project.project record
-            sale_orders: sale.order recordset
-            start_date: Start date string
-            end_date: End date string
-            
-        Returns:
-            recordset: account.move records
-        """
-        # Find all invoices in date range
-        domain = [
-            ('move_type', '=', 'out_invoice'),
-            ('state', 'not in', ['draft', 'cancel']),
-            ('invoice_date', '>=', start_date),
-            ('invoice_date', '<=', end_date),
-            ('company_id', '=', self.company_id.id),
-        ]
-        
-        invoices = self.env['account.move'].search(domain)
-        if not invoices:
-            return self.env['account.move']
-            
-        # Link invoices to project through sale orders
-        project_invoices = self.env['account.move']
-        
-        # Method 1: Through invoice lines linked to sale order lines
-        project_invoices |= invoices.filtered(
-            lambda inv: any(
-                line.sale_line_ids and line.sale_line_ids.order_id in sale_orders
-                for line in inv.invoice_line_ids
-                if hasattr(line, 'sale_line_ids') and line.sale_line_ids
-            )
-        )
-        
-        # Method 2: Through analytic account on invoice lines
-        if project.analytic_account_id:
-            # Get by analytic distribution (Odoo 16)
-            analytic_invoices = invoices.filtered(
-                lambda inv: any(
-                    line.analytic_distribution and 
-                    str(project.analytic_account_id.id) in line.analytic_distribution
-                    for line in inv.invoice_line_ids
-                    if hasattr(line, 'analytic_distribution') and line.analytic_distribution
-                )
-            )
-            project_invoices |= analytic_invoices
-            
-        return project_invoices
-        
+
+
     def _get_project_vendor_bills_data(self, project, start_date, end_date):
         """Get comprehensive vendor bills data related to a project
         
@@ -509,6 +458,8 @@ class L4Dashboard(models.Model):
             ('company_id', '=', self.env.company.id),
         ]
         vendor_bills = self.env['account.move'].search(domain)
+
+        company_currency = self.env.company.currency_id
         
         for bill in vendor_bills:
             for line in bill.invoice_line_ids:
@@ -523,6 +474,11 @@ class L4Dashboard(models.Model):
                             if account_id in analytic_ids:
                                 # Apply the percentage from the distribution
                                 line_amount = line.price_subtotal * (percentage / 100.0)
+
+                                # Convert to company currency if needed
+                                if bill.currency_id != company_currency:
+                                    line_amount = bill.currency_id._convert(line_amount, company_currency, self.env.company, bill.date)
+                                    
                                 total_amount += line_amount
                                 
                                 # Check if the bill is actually paid

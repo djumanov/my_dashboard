@@ -1,4 +1,14 @@
 .dashboard-form {
+    .o_form_view {
+        select {
+            appearance: auto !important;
+            background: #fff !important;
+            border-radius: 4px !important;
+            min-width: auto !important;
+            color: #000 !important;
+        }
+    }
+
     // Highcharts overrides
     rect:hover {
         fill: #fff !important;

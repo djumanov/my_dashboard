@@ -1,108 +1,154 @@
 <templates xml:space="preserve">
   <t t-name="custom.l3_dashboard" owl="1">
-    <div class="container-fluid bg-white py-4 px-5" style="font-family: 'Times New Roman'; min-height: 100vh;">
-
-      <!-- Title -->
-      <h2 class="fw-bold text-dark border-bottom border-4 border-warning pb-2 mb-4" style="font-size: 1.75rem;">
-        L4 Dashboard
-      </h2>
-
-      <!-- Filters 
-      <div class="d-flex align-items-center gap-3 mb-4">
-        <span class="fw-semibold text-secondary">FILTER</span>
-
-        <select class="form-select" t-model="state.filters.region">
-          <option value="">Loc/Export</option>
-          <option value="Local">Local</option>
-          <option value="Export">Export</option>
-        </select>
-
-        <select class="form-select" t-model="state.filters.month">
-          <option value="">Month</option>
-          <t t-foreach="state.months" t-as="m" t-key="m">
-            <option t-att-value="m" t-esc="m" />
-          </t>
-        </select>
-
-        <select class="form-select" t-model="state.filters.year">
-          <option value="">Year</option>
-          <t t-foreach="state.years" t-as="y" t-key="y">
-            <option t-att-value="y" t-esc="y" />
-          </t>
-        </select>
-
-        <select class="form-select"  t-model="state.filters.project">
-          <option value="">Project</option>
-          <t t-foreach="state.projects" t-as="p" t-key="p.id">
-            <option t-att-value="p.id" t-esc="p.name" />
-          </t>
-        </select>
+    <div class="dash l3-dashboard">
+      <!-- Header -->
+      <div class="dash__header">
+        <!-- Changed here -->
+        <h1>
+          L4 Dashboard<br/>
+          Project Information
+        </h1>
+        <span class="badge">Project Delivery</span>
       </div>
-      -->
 
       <!-- Project Info -->
-      <div class="table-responsive mb-4">
-        <table class="table table-bordered border-dark align-middle w-100">
-          <tbody>
-            <tr><th class="bg-warning text-dark">Project Name</th><td colspan="5"><t t-esc="state.project.name" /></td></tr>
-            <tr><th class="bg-warning text-dark">Customer</th><td colspan="5"><t t-esc="state.project.customer" /></td></tr>
-            <tr><th class="bg-warning text-dark">PO Value</th><td colspan="5"><t t-esc="this.formatNumber(state.project.po_value)" /></td></tr>
-            <tr><th class="bg-warning text-dark">Start Date</th><td colspan="5"><t t-esc="state.project.start_date" /></td></tr>
-            <tr><th class="bg-warning text-dark">End Date</th><td colspan="5"><t t-esc="state.project.end_date" /></td></tr>
-          </tbody>
-        </table>
+      <div class="card card--section mb-3">
+        <div class="card-title">Project Information</div>
+        <div class="card-body">
+          <div class="table-wrap">
+            <table class="dash-table info-grid">
+              <tbody>
+                <!-- 1) Full-width value -->
+                <tr>
+                  <th class="sticky-col">Project Name</th>
+                  <td colspan="3" class="text-start">
+                    <t t-esc="state.project.name"/>
+                  </td>
+                </tr>
+
+                <!-- 2) Full-width value -->
+                <tr>
+                  <th class="sticky-col">Customer</th>
+                  <td colspan="3" class="text-start">
+                    <t t-esc="state.project.customer"/>
+                  </td>
+                </tr>
+
+                <!-- 3) Split row: PO Value | Margin -->
+                <tr>
+                  <th class="sticky-col">PO Value</th>
+                  <td class="text-start">
+                    <t t-esc="this.formatNumber(state.project.po_value)"/>
+                  </td>
+                  <th>Margin</th>
+                  <td class="text-start">
+                    <t t-esc="this.formatNumber(this.marginTotals(state.project))"/>
+                  </td>
+                </tr>
+
+                <!-- 4) Split row: Start Date | Margin % -->
+                <tr>
+                  <th class="sticky-col">Start Date</th>
+                  <td class="text-start">
+                    <t t-esc="state.project.start_date"/>
+                  </td>
+                  <th>Margin %</th>
+                  <td class="text-start">
+                    <t t-esc="this.formatPercent(this.marginPctTotals(state.project))"/>
+                  </td>
+                </tr>
+
+                <!-- 5) Left only, rest blank -->
+                <tr>
+                  <th class="sticky-col">End Date</th>
+                  <td class="text-start">
+                    <t t-esc="state.project.end_date"/>
+                  </td>
+                  <td colspan="2"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
+
 
       <!-- Main Table -->
-      <div class="table-responsive">
-        <table class="table table-bordered border-dark w-100 align-middle text-center">
-          <thead class="bg-warning text-dark fw-bold">
-            <tr>
-              <th>Milestone / Description</th>
-              <th>Date</th>
-              <th>Invoiced</th>
-              <th>Collected</th>
-              <th>Pending Collection</th>
-              <th>Outstanding Aging</th>
-              <th>Vendor Invoice</th>
-              <th>Payment Made</th>
-              <th>Payment to be Made</th>
-              <th>Payroll Cost</th>
-            </tr>
-          </thead>
-          <tbody>
-            <t t-foreach="state.project.milestones || []" t-as="m" t-key="m.id">
+      <div class="card">
+        <div class="table-wrap">
+          <table class="dash-table">
+          <!-- THEAD: replace your current <thead> -->
+            <thead>
               <tr>
-                <td class="text-start"><t t-esc="m.description" /></td>
-                <td><t t-esc="m.date" /></td>
-                <td><t t-esc="this.formatNumber(m.invoiced)" /></td>
-                <td><t t-esc="this.formatNumber(m.collected)" /></td>
-                <td><t t-esc="this.formatNumber(m.pending_collection)" /></td>
-                <td><t t-esc="m.outstanding_aging" /></td>
-                <td><t t-esc="this.formatNumber(m.vendor_invoice)" /></td>
-                <td><t t-esc="this.formatNumber(m.payment_made)" /></td>
-                <td><t t-esc="this.formatNumber(m.payment_to_be_made)" /></td>
-                <td></td>
+                <th>Milestone / Description</th>
+                <th style="width: 100px;">Date</th>
+                <th>Invoiced</th>
+                <th>Collected</th>
+                <th class="twoline" style="width: 50px;">Pending Collection</th>
+                <th class="twoline" style="width: 50px;">Outstanding Aging</th>
+                <th class="twoline">Vendor Invoice</th>
+                <th class="twoline">Payment Made</th>
+                <th style="width: 50px;">Payment to be Made</th>
+                <th class="twoline">Payroll Cost</th>
+                <!-- NEW -->
+                <th class="twoline">Total Cost</th>
+                <!-- <th>Margin</th>
+                <th>Margin %</th> -->
               </tr>
-            </t>
-
-            <!-- Totals -->
-            <tr class="bg-secondary text-white fw-bold">
-              <td class="text-start">Total</td>
-              <td></td>
-              <td><t t-esc="this.formatNumber(state.project.total_invoiced)" /></td>
-              <td><t t-esc="this.formatNumber(state.project.total_collected)" /></td>
-              <td><t t-esc="this.formatNumber(state.project.total_pending_collection)" /></td>
-              <td></td>
-              <td><t t-esc="this.formatNumber(state.project.total_vendor_invoice)" /></td>
-              <td><t t-esc="this.formatNumber(state.project.total_payment_made)" /></td>
-              <td><t t-esc="this.formatNumber(state.project.total_payment_to_be_made)" /></td>
-              <td><t t-esc="this.formatNumber(state.project.total_payroll_cost)" /></td>
-            </tr>
-          </tbody>
-        </table>
+            </thead>
+  
+            <tbody>
+              <!-- LOOP ROW: replace your current <t t-foreach=...> block -->
+              <t t-foreach="state.project.milestones || []" t-as="m" t-key="m.id">
+                <tr>
+                  <td class="sticky-col text-start"><t t-esc="m.description"/></td>
+                  <td><t t-esc="m.date"/></td>
+                  <td class="text-end"><t t-esc="this.formatNumber(m.invoiced)"/></td>
+                  <td class="text-end"><t t-esc="this.formatNumber(m.collected)"/></td>
+                  <td class="text-end" t-att-class="m.pending_collection &gt; 0 ? 'text-danger' : ''">
+                    <t t-esc="this.formatNumber(m.pending_collection)"/>
+                  </td>
+                  <td><t t-esc="m.outstanding_aging"/></td>
+                  <td class="text-end"><t t-esc="this.formatNumber(m.vendor_invoice)"/></td>
+                  <td class="text-end"><t t-esc="this.formatNumber(m.payment_made)"/></td>
+                  <td class="text-end"><t t-esc="this.formatNumber(m.payment_to_be_made)"/></td>
+                  <td class="text-end"><t t-esc="this.formatNumber(m.payroll_cost || 0)"/></td>
+            
+                  <!-- NEW computed cells -->
+                  <td class="text-end"><t t-esc="this.formatNumber(this.totalCost(m))"/></td>
+                  <!-- <td class="text-end" t-att-class="this.margin(m) &lt; 0 ? 'text-danger' : ''">
+                    <t t-esc="this.formatNumber(this.margin(m))"/>
+                  </td>
+                  <td class="text-end"><t t-esc="this.formatPercent(this.marginPct(m))"/></td> -->
+                </tr>
+              </t>
+            
+              <!-- TOTALS ROW: separate row AFTER the loop -->
+              <tr class="bg-accent fw-bold">
+                <td class="sticky-col text-start">Total</td>
+                <td></td>
+                <td class="text-end"><t t-esc="this.formatNumber(state.project.total_invoiced)"/></td>
+                <td class="text-end"><t t-esc="this.formatNumber(state.project.total_collected)"/></td>
+                <td class="text-end"><t t-esc="this.formatNumber(state.project.total_pending_collection)"/></td>
+                <td></td>
+                <td class="text-end"><t t-esc="this.formatNumber(state.project.total_vendor_invoice)"/></td>
+                <td class="text-end"><t t-esc="this.formatNumber(state.project.total_payment_made)"/></td>
+                <td class="text-end"><t t-esc="this.formatNumber(state.project.total_payment_to_be_made)"/></td>
+                <td class="text-end"><t t-esc="this.formatNumber(state.project.total_payroll_cost || 0)"/></td>
+            
+                <!-- NEW totals -->
+                <td class="text-end"><t t-esc="this.formatNumber(this.totalCostTotals(state.project))"/></td>
+                <!-- <td class="text-end" t-att-class="this.marginTotals(state.project) &lt; 0 ? 'text-danger fw-bold' : 'fw-bold'">
+                  <t t-esc="this.formatNumber(this.marginTotals(state.project))"/>
+                </td>
+                <td class="text-end fw-bold"><t t-esc="this.formatPercent(this.marginPctTotals(state.project))"/></td> -->
+              </tr>
+            </tbody>
+  
+          </table>
+        </div>
+        <div class="p-2 muted small">Figures are project currency unless noted.</div>
       </div>
-
     </div>
   </t>
 </templates>
