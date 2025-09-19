@@ -351,7 +351,7 @@ class L4Dashboard(models.Model):
             "project_id": project.id,
             "project": project.name,
             "customer": project.partner_id.name if project.partner_id else _('No Customer'),
-            "date": sale_order.date_order.strftime('%Y-%m-%d'),
+            "date": project.date_start.strftime('%Y-%m-%d') if hasattr(project, "date_start") else "",
             "po_value": 0.0,
             "invoiced": 0.0,
             "collected": 0.0,
