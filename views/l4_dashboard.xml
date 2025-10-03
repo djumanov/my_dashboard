@@ -33,6 +33,9 @@
                             <field name="year" placeholder="Select Year" class="mx-1 my-1"/>
                             <field name="month" placeholder="Select Month" class="mx-1 my-1"/>
                             <field name="quarter" placeholder="Select Quarter" class="mx-1 my-1"/>
+                            <div class="align-self-end d-flex gap-2">
+                                <button name="export_excel" type="object" string="Download Excel" class="btn btn-sm btn-primary" style="min-width: 160px;" />
+                            </div>
                         </div>
 
                     </div>

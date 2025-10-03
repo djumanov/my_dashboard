@@ -1,4 +1,7 @@
 import json
+import io
+import xlsxwriter
+import base64
 import logging
 from datetime import datetime, timedelta
 from odoo import api, fields, models, Command, _
@@ -579,3 +582,225 @@ class L4Dashboard(models.Model):
         if isinstance(value, float):
             return float_round(value, precision_digits=2)
         return value
+
+    def export_excel(self):
+        self.ensure_one()
+        data = self._get_dashboard_data()
+
+        output = io.BytesIO()
+        workbook = xlsxwriter.Workbook(output)
+        worksheet = workbook.add_worksheet("L3 Dashboard Report")
+
+        # Define formats
+        bold = workbook.add_format({'bold': True, 'font_size': 11})
+        header_format = workbook.add_format({
+            'bold': True,
+            'font_size': 12,
+            'bg_color': '#4472C4',
+            'font_color': 'white',
+            'align': 'center',
+            'valign': 'vcenter',
+            'border': 1
+        })
+        title_format = workbook.add_format({
+            'bold': True,
+            'font_size': 14,
+            'align': 'left'
+        })
+        info_label_format = workbook.add_format({
+            'bold': True,
+            'font_size': 10
+        })
+        currency_format = workbook.add_format({
+            'num_format': '#,##0.00',
+            'align': 'right'
+        })
+        percent_format = workbook.add_format({
+            'num_format': '0.00%',
+            'align': 'right'
+        })
+        date_format = workbook.add_format({
+            'num_format': 'yyyy-mm-dd',
+            'align': 'center'
+        })
+        cell_format = workbook.add_format({
+            'border': 1,
+            'align': 'left',
+            'valign': 'vcenter'
+        })
+        number_cell_format = workbook.add_format({
+            'border': 1,
+            'num_format': '#,##0.00',
+            'align': 'right',
+            'valign': 'vcenter'
+        })
+        percent_cell_format = workbook.add_format({
+            'border': 1,
+            'num_format': '0.00%',
+            'align': 'right',
+            'valign': 'vcenter'
+        })
+        summary_label_format = workbook.add_format({
+            'bold': True,
+            'bg_color': '#D9E1F2',
+            'border': 1,
+            'align': 'left'
+        })
+        summary_value_format = workbook.add_format({
+            'bold': True,
+            'bg_color': '#D9E1F2',
+            'border': 1,
+            'num_format': '#,##0.00',
+            'align': 'right'
+        })
+
+        # Set column widths
+        worksheet.set_column('A:A', 25)  # Project
+        worksheet.set_column('B:B', 20)  # Customer
+        worksheet.set_column('C:C', 12)  # Region
+        worksheet.set_column('D:D', 12)  # Date
+        worksheet.set_column('E:N', 15)  # Financial columns
+
+        row = 0
+
+        # Title
+        worksheet.write(row, 0, 'L3 Dashboard Report', title_format)
+        row += 2
+
+        # Company Information
+        worksheet.write(row, 0, 'Company:', info_label_format)
+        worksheet.write(row, 1, data['company']['name'])
+        row += 1
+        worksheet.write(row, 0, 'Currency:', info_label_format)
+        worksheet.write(row, 1, data['company']['currency'])
+        row += 1
+        worksheet.write(row, 0, 'Country:', info_label_format)
+        worksheet.write(row, 1, data['company']['country'])
+        row += 2
+
+        # Filter Information
+        worksheet.write(row, 0, 'Report Filters:', info_label_format)
+        row += 1
+        worksheet.write(row, 0, 'Year:', info_label_format)
+        worksheet.write(row, 1, str(data['filters']['year']))
+        row += 1
+        
+        if data['filters']['quarter']:
+            worksheet.write(row, 0, 'Quarter:', info_label_format)
+            worksheet.write(row, 1, data['filters']['quarter'])
+            row += 1
+        elif data['filters']['month']:
+            worksheet.write(row, 0, 'Month:', info_label_format)
+            worksheet.write(row, 1, str(data['filters']['month']))
+            row += 1
+        
+        worksheet.write(row, 0, 'Region:', info_label_format)
+        worksheet.write(row, 1, data['filters']['tag_type'].title())
+        row += 1
+        worksheet.write(row, 0, 'Date Range:', info_label_format)
+        worksheet.write(row, 1, data['filters']['date_range'])
+        row += 2
+
+        # Project Data Headers
+        headers = [
+            'Project',
+            'Customer',
+            'Region',
+            'Date',
+            'PO Value',
+            'Invoiced',
+            'Collected',
+            'Pending Collection',
+            'Outstanding Aging (Days)',
+            'Vendor Invoice',
+            'Payment Made',
+            'Payment To Be Made',
+            'Payroll Cost',
+            'Total Outgoing',
+            'Total Margin',
+            'Margin %'
+        ]
+
+        for col, header in enumerate(headers):
+            worksheet.write(row, col, header, header_format)
+        
+        row += 1
+
+        # Project Data Rows
+        for project in data['projects']:
+            worksheet.write(row, 0, project['project'], cell_format)
+            worksheet.write(row, 1, project['customer'], cell_format)
+            worksheet.write(row, 2, project.get('region', ''), cell_format)
+            worksheet.write(row, 3, project['date'], cell_format)
+            worksheet.write(row, 4, project['po_value'], number_cell_format)
+            worksheet.write(row, 5, project['invoiced'], number_cell_format)
+            worksheet.write(row, 6, project['collected'], number_cell_format)
+            worksheet.write(row, 7, project['pending_collection'], number_cell_format)
+            worksheet.write(row, 8, project['outstanding_aging'], cell_format)
+            worksheet.write(row, 9, project['vendor_invoice'], number_cell_format)
+            worksheet.write(row, 10, project['payment_made'], number_cell_format)
+            worksheet.write(row, 11, project['payment_to_be_made'], number_cell_format)
+            worksheet.write(row, 12, project['payroll_cost'], number_cell_format)
+            worksheet.write(row, 13, project['total_outgoing'], number_cell_format)
+            worksheet.write(row, 14, project['total_margin'], number_cell_format)
+            worksheet.write(row, 15, project['margin_percent'] / 100, percent_cell_format)
+            row += 1
+
+        # Summary Section
+        row += 1
+        summary = data['summary']
+        
+        worksheet.write(row, 0, 'SUMMARY', title_format)
+        row += 2
+
+        # Summary data
+        summary_items = [
+            ('Total Projects', summary['project_count']),
+            ('Total PO Value', summary['total_po_value']),
+            ('Total Invoiced', summary['total_invoiced']),
+            ('Total Collected', summary['total_collected']),
+            ('Total Pending Collection', summary['total_pending_collection']),
+            ('Total Vendor Invoice', summary['total_vendor_invoice']),
+            ('Total Payment Made', summary['total_payment_made']),
+            ('Total Payment To Be Made', summary['total_payment_to_be_made']),
+            ('Total Payroll Cost', summary['total_payroll_cost']),
+            ('Total Margin', summary['total_margin']),
+            ('Average Margin %', summary['avg_margin_percent']),
+        ]
+
+        for label, value in summary_items:
+            worksheet.write(row, 0, label, summary_label_format)
+            if label == 'Total Projects':
+                worksheet.write(row, 1, int(value), summary_label_format)
+            elif label == 'Average Margin %':
+                worksheet.write(row, 1, value / 100, percent_cell_format)
+            else:
+                worksheet.write(row, 1, value, summary_value_format)
+            row += 1
+
+        workbook.close()
+        output.seek(0)
+        file_data = output.read()
+
+        # Generate filename with date
+        filename = f'l3_dashboard_report_{data["filters"]["year"]}'
+        if data['filters']['quarter']:
+            filename += f'_{data["filters"]["quarter"]}'
+        elif data['filters']['month']:
+            filename += f'_M{data["filters"]["month"]:02d}'
+        filename += '.xlsx'
+
+        attachment = self.env['ir.attachment'].create({
+            'name': filename,
+            'type': 'binary',
+            'datas': base64.b64encode(file_data),
+            'res_model': self._name,
+            'res_id': self.id,
+            'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        })
+
+        return {
+            'type': 'ir.actions.act_url',
+            'url': '/web/content/%s?download=true' % attachment.id,
+            'target': 'self',
+        }
