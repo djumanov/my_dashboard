@@ -69,26 +69,10 @@ class L4Dashboard(models.Model):
 
     @api.model
     def get_dashboard_data_json(self, year=None, tag_type=None, month=None, quarter=None):
-        """API method to get dashboard data in JSON format
-        
-        Args:
-            year (str): Year to filter by
-            tag_type (str): Region filter (local/export/all)
-            month (str): Month number to filter by
-            quarter (str): Quarter to filter by
-            
-        Returns:
-            str: JSON data for dashboard
-        """
+        """API method to get dashboard data in JSON format"""
         if not year:
-            year = str(fields.Date.today().year)
-
-        # Validate parameters
-        if month and quarter:
-            # Cannot have both month and quarter
-            quarter = None
+            year = fields.Date.today().year
             
-        # Avoid creating unnecessary records, search first
         dashboard = self.search([
             ('year', '=', year),
             ('month', '=', month),
@@ -103,52 +87,55 @@ class L4Dashboard(models.Model):
                 'month': month,
                 'quarter': quarter,
                 'tag_type': tag_type or 'all',
-                'company_id': self.env.company.id
             })
         
-        # Recompute data (don't rely on stored value since data changes frequently)
         dashboard._compute_dashboard_data()
         return dashboard.dashboard_data
 
     def _get_dashboard_data(self):
-        """Compute all dashboard data and return as a structured dictionary
-        
-        Returns:
-            dict: Complete dashboard data structure
-        """
+        """Compute all dashboard data and return as a structured dictionary"""
         self.ensure_one()
         
+        month = int(self.month) if self.month else 0
         year = int(self.year) if self.year else datetime.now().year
+        quarter = self.quarter
         
-        # Initialize start and end dates - will be modified based on filters
-        start_date, end_date = self._get_filter_date_range(year)
-        
-        # Handle quarter filter (takes precedence over month)
-        if self.quarter and self.month:
-            # Reset month when quarter is set to ensure consistency
-            self.write({'month': False})
-        
-        # Format dates for ORM
-        start_date_str = fields.Date.to_string(start_date)
-        end_date_str = fields.Date.to_string(end_date)
-        
-        # Get month name if filtering by month
-        month_name = None
-        if self.month:
-            month_name = dict(self._fields['month'].selection).get(self.month)
+        if quarter == 'Q1':
+            start_date = fields.Date.to_string(datetime(year, 1, 1))
+            end_date = fields.Date.to_string(datetime(year, 3, 31))
+            self.month = None
+        elif quarter == 'Q2':
+            start_date = fields.Date.to_string(datetime(year, 4, 1))
+            end_date = fields.Date.to_string(datetime(year, 6, 30))
+            self.month = None
+        elif quarter == 'Q3':
+            start_date = fields.Date.to_string(datetime(year, 7, 1))
+            end_date = fields.Date.to_string(datetime(year, 9, 30))
+            self.month = None
+        elif quarter == 'Q4':
+            start_date = fields.Date.to_string(datetime(year, 10, 1))
+            end_date = fields.Date.to_string(datetime(year, 12, 31))
+        elif month == 0:
+            start_date = fields.Date.to_string(datetime(year, 1, 1))
+            end_date = fields.Date.to_string(datetime(year, 12, 31))
+            self.quarter = None
+        else:
+            start_date = fields.Date.to_string(date_utils.start_of(datetime(year, month, 1), 'month'))
+            end_date = fields.Date.to_string(date_utils.end_of(datetime(year, month, 1), 'month'))
+            self.quarter = None
         
         tag_type = self.tag_type or 'all'
 
-        project_rows = self._get_project_rows(start_date_str, end_date_str, tag_type)
+        project_rows = self._get_project_rows(start_date, end_date, tag_type)
         
         return {
             'filters': {
                 'year': year,
                 'month': int(self.month) if self.month else 0,
-                'month_name': month_name,
+                'month_name': month,
                 'quarter': self.quarter,
                 'tag_type': tag_type,
-                'date_range': f"{start_date_str} to {end_date_str}",
+                'date_range': f"{start_date} to {end_date}",
             },
             'company': {
                 'name': self.company_id.name,
@@ -158,42 +145,6 @@ class L4Dashboard(models.Model):
             'projects': project_rows,
             'summary': self._get_dashboard_summary(project_rows),
         }
-        
-    def _get_filter_date_range(self, year):
-        """Calculate start and end dates based on filters
-        
-        Args:
-            year (int): Year to filter by
-            
-        Returns:
-            tuple: (start_date, end_date) as datetime objects
-        """
-        # Handle quarter filter
-        if self.quarter:
-            if self.quarter == 'Q1':
-                start_date = datetime(year, 1, 1)
-                end_date = datetime(year, 3, 31, 23, 59, 59)
-            elif self.quarter == 'Q2':
-                start_date = datetime(year, 4, 1)
-                end_date = datetime(year, 6, 30, 23, 59, 59)
-            elif self.quarter == 'Q3':
-                start_date = datetime(year, 7, 1)
-                end_date = datetime(year, 9, 30, 23, 59, 59)
-            elif self.quarter == 'Q4':
-                start_date = datetime(year, 10, 1)
-                end_date = datetime(year, 12, 31, 23, 59, 59)
-        # Handle month filter
-        elif self.month:
-            month = int(self.month)
-            # Calculate start and end of month
-            start_date = datetime(year, month, 1)
-            end_date = date_utils.end_of(start_date, 'month')
-        # Default to full year
-        else:
-            start_date = datetime(year, 1, 1)
-            end_date = datetime(year, 12, 31, 23, 59, 59)
-            
-        return start_date, end_date
         
     def _get_region_projects(self, tag_type):
         """Get projects based on region tag
@@ -239,14 +190,20 @@ class L4Dashboard(models.Model):
         domain = [
             ('company_id', '=', self.company_id.id),
             ('state', '!=', 'cancel'),
-            ('date_order', '>=', start_date), 
-            ('date_order', '<=', end_date)
         ]
         sales_orders = self.env['sale.order'].search(domain)
 
+        # Find projects within date range
+        domain = [
+            ('company_id', '=', self.company_id.id),
+            ('date_start', '>=', start_date), 
+            ('date_start', '<=', end_date)
+        ]
+        projects = self.env['project.project'].search(domain)
+
         if not sales_orders:
             return []
-            
+
         # Get projects by region tag
         local_projects, export_projects, local_analytic_ids, export_analytic_ids = self._get_region_projects(tag_type)
         
@@ -275,10 +232,11 @@ class L4Dashboard(models.Model):
                     project_region = 'Local' if project in local_projects else 'Export'
                     
                     try:
-                        data = self._get_project_data(project, order, start_date, end_date, 
-                                                    local_analytic_ids if project_region == 'Local' else export_analytic_ids)
-                        data['region'] = project_region
-                        results.append(data)
+                        if project in projects:
+                            data = self._get_project_data(project, order, start_date, end_date, 
+                                                        local_analytic_ids if project_region == 'Local' else export_analytic_ids)
+                            data['region'] = project_region
+                            results.append(data)
                     except Exception as e:
                         _logger.error(f"Error processing project {project.name}: {e}")
 
@@ -322,10 +280,11 @@ class L4Dashboard(models.Model):
                                 continue  # Skip if not matching our tag filters
                             
                             try:
-                                data = self._get_project_data(project, order, start_date, end_date,
-                                                            local_analytic_ids if project_region == 'Local' else export_analytic_ids)
-                                data['region'] = project_region
-                                results.append(data)
+                                if project in projects:
+                                    data = self._get_project_data(project, order, start_date, end_date,
+                                                                local_analytic_ids if project_region == 'Local' else export_analytic_ids)
+                                    data['region'] = project_region
+                                    results.append(data)
                             except Exception as e:
                                 _logger.error(f"Error processing project {project.name} with analytic distribution: {e}")
                             
@@ -427,7 +386,6 @@ class L4Dashboard(models.Model):
             data["margin_percent"] = 0.0
         
         return self._format_project_data(data)
-
 
     def _get_project_vendor_bills_data(self, project, start_date, end_date):
         """Get comprehensive vendor bills data related to a project

@@ -315,7 +315,16 @@ export class L2Dashboard extends Component {
           events: { 
             mouseLeave: () => this._hideExtTip(),
             click: function () {
-              window.location.href = "/web#action=my_dashboard.action_l4_dashboard";
+              const domain = JSON.stringify([
+                  ["year", "=", "2024"],
+                  ["tag_type", "=", "local"]
+              ]);
+
+              // Encode qilib URLga qo‘shish
+              window.location.href = "/web#action=my_dashboard.action_l4_dashboard"
+                  + "&model=l4.dashboard"
+                  + "&view_type=list"
+                  + "&domain=" + encodeURIComponent(domain);
             }
           },
         },

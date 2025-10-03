@@ -406,7 +406,7 @@
                     <th class="sticky-col">Region</th>
                     <th class="th-wrap">Project</th>
                     <th class="th-wrap">Customer</th>
-                    <th class="th-wrap">Date</th>
+                    <th class="th-wrap">Start Date</th>
                     <th class="th-wrap num">PO Value</th>
                     <th class="th-wrap num">Invoiced</th>
                     <th class="th-wrap num">Collected</th>

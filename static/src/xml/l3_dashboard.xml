@@ -1,5 +1,29 @@
 <templates xml:space="preserve">
   <t t-name="custom.l3_dashboard" owl="1">
+    <style>
+      .project-info {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .info-row {
+        display: grid;
+        grid-template-columns: 120px 150px 80px 150px;
+        align-items: center;
+        gap: 16px; /* masofani boshqarish uchun */
+      }
+
+      .label {
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .value {
+        text-align: left;
+      }
+    </style>
+
     <div class="dash l3-dashboard">
       <!-- Header -->
       <div class="dash__header">
@@ -14,64 +38,34 @@
       <!-- Project Info -->
       <div class="card card--section mb-3">
         <div class="card-title">Project Information</div>
-        <div class="card-body">
-          <div class="table-wrap">
-            <table class="dash-table info-grid">
-              <tbody>
-                <!-- 1) Full-width value -->
-                <tr>
-                  <th class="sticky-col">Project Name</th>
-                  <td colspan="3" class="text-start">
-                    <t t-esc="state.project.name"/>
-                  </td>
-                </tr>
-
-                <!-- 2) Full-width value -->
-                <tr>
-                  <th class="sticky-col">Customer</th>
-                  <td colspan="3" class="text-start">
-                    <t t-esc="state.project.customer"/>
-                  </td>
-                </tr>
-
-                <!-- 3) Split row: PO Value | Margin -->
-                <tr>
-                  <th class="sticky-col">PO Value</th>
-                  <td class="text-start">
-                    <t t-esc="this.formatNumber(state.project.po_value)"/>
-                  </td>
-                  <th>Margin</th>
-                  <td class="text-start">
-                    <t t-esc="this.formatNumber(this.marginTotals(state.project))"/>
-                  </td>
-                </tr>
-
-                <!-- 4) Split row: Start Date | Margin % -->
-                <tr>
-                  <th class="sticky-col">Start Date</th>
-                  <td class="text-start">
-                    <t t-esc="state.project.start_date"/>
-                  </td>
-                  <th>Margin %</th>
-                  <td class="text-start">
-                    <t t-esc="this.formatPercent(this.marginPctTotals(state.project))"/>
-                  </td>
-                </tr>
-
-                <!-- 5) Left only, rest blank -->
-                <tr>
-                  <th class="sticky-col">End Date</th>
-                  <td class="text-start">
-                    <t t-esc="state.project.end_date"/>
-                  </td>
-                  <td colspan="2"></td>
-                </tr>
-              </tbody>
-            </table>
+        <div class="card-body project-info">
+          
+          <div class="info-row">
+            <div class="label">Project Name</div>
+            <div class="value"><t t-esc="state.project.name"/></div>
           </div>
+
+          <div class="info-row">
+            <div class="label">Customer</div>
+            <div class="value"><t t-esc="state.project.customer"/></div>
+          </div>
+
+          <div class="info-row">
+            <div class="label">Start Date</div>
+            <div class="value"><t t-esc="state.project.start_date"/></div>
+            <div class="label">Margin %</div>
+            <div class="value"><t t-esc="this.formatPercent(this.marginPctTotals(state.project))"/></div>
+          </div>
+
+          <div class="info-row">
+            <div class="label">End Date</div>
+            <div class="value"><t t-esc="state.project.end_date"/></div>
+            <div class="label">Margin</div>
+            <div class="value"><t t-esc="this.formatNumber(this.marginTotals(state.project))"/></div>
+          </div>
+
         </div>
       </div>
-
 
       <!-- Main Table -->
       <div class="card">
@@ -84,14 +78,14 @@
                 <th style="width: 100px;">Date</th>
                 <th>Invoiced</th>
                 <th>Collected</th>
-                <th class="twoline" style="width: 50px;">Pending Collection</th>
-                <th class="twoline" style="width: 50px;">Outstanding Aging</th>
-                <th class="twoline">Vendor Invoice</th>
-                <th class="twoline">Payment Made</th>
-                <th style="width: 50px;">Payment to be Made</th>
-                <th class="twoline">Payroll Cost</th>
+                <th class="twoline" style="width: 50px;">Pending<br/>Collection</th>
+                <th class="twoline" style="width: 50px;">Outstanding<br/>Aging</th>
+                <th class="twoline">Vendor<br/>Invoice</th>
+                <th class="twoline">Payment<br/>Made</th>
+                <th style="width: 50px;">Payment to<br/>be Made</th>
+                <th class="twoline">Payroll<br/>Cost</th>
                 <!-- NEW -->
-                <th class="twoline">Total Cost</th>
+                <th class="twoline">Total<br/>Cost</th>
                 <!-- <th>Margin</th>
                 <th>Margin %</th> -->
               </tr>
