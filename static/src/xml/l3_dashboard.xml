@@ -25,16 +25,6 @@
     </style>
 
     <div class="dash l3-dashboard">
-      <!-- Header -->
-      <div class="dash__header">
-        <!-- Changed here -->
-        <h1>
-          L4 Dashboard<br/>
-          Project Information
-        </h1>
-        <span class="badge">Project Delivery</span>
-      </div>
-
       <!-- Project Info -->
       <div class="card card--section mb-3">
         <div class="card-title">Project Information</div>

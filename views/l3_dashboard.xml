@@ -4,25 +4,45 @@
         <field name="name">l3.dashboard.form.OWL</field>
         <field name="model">l3.dashboard</field>
         <field name="arch" type="xml">
-        <form string="L4 Dashboard" class="dashboard-form" create="0" edit="0" style="position: relative;">
-            <style>
-                .o_control_panel {
-                    border-bottom: 0;
-                    padding-top: 0;
-                    padding-right: 0;
-                    padding-bottom: 0;
-                    padding-left: 0;
-                    visibility: hidden;
-                }
-                .o_form_nosheet {
-                    padding-top: 0;
-                }
-            </style>
-            <div class="o_form_view_container" style="width: 90%; margin: auto;">
-                <field name="project_id" invisible="1"/>
-                <field name="dashboard_data" widget="l3_dashboard" nolabel="1" readonly="1"/>
-            </div>
-        </form>
+            <form string="L4 Dashboard" class="dashboard-form" create="0" edit="0" style="position: relative;">
+                <style>
+                    .o_control_panel {
+                        border-bottom: 0;
+                        padding-top: 0;
+                        padding-right: 0;
+                        padding-bottom: 0;
+                        padding-left: 0;
+                        visibility: hidden;
+                    }
+                    .o_form_nosheet {
+                        padding-top: 0;
+                    }
+                </style>
+                <div class="o_form_view_container" style="width: 100%; margin: auto;">
+                    <!-- Header section with Dashboard title on the left and filters on the right -->
+                    <div class="row align-items-center mt-3 mb-2">
+                        
+                        <!-- Left side (Dashboard Title) -->
+                        <div class="col-md-6 col-sm-12 text-start">
+                            <h1 class="my-0" style="text-align: right;">L4 Project Information</h1>
+                        </div>
+
+                        <!-- Right side (Filters) -->
+                        <div class="col-md-6 col-sm-12 d-flex flex-wrap justify-content-center justify-content-start" style="gap: 10px; text-align: center;">
+                            <div class="align-self-end d-flex gap-2">
+                                <button name="export_excel" type="object" string="Download Excel" class="btn btn-sm btn-primary" style="min-width: 160px;" />
+                            </div>
+                        </div>
+
+                    </div>
+                    
+                    <!-- Dashboard content -->
+                    <field name="dashboard_data" widget="l3_dashboard" nolabel="1" readonly="1"/>
+                    
+                    <!-- Hidden fields -->
+                     <field name="project_id" invisible="1"/>
+                </div>
+            </form>
         </field>
     </record>
 

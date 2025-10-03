@@ -3,6 +3,10 @@ from odoo.http import request
 import json
 import logging
 from datetime import date, datetime, timedelta
+import io
+import xlsxwriter
+import base64
+
 
 _logger = logging.getLogger(__name__)
 
@@ -326,7 +330,219 @@ class L3Dashboard(models.Model):
             payroll_cost += hourly_cost * timesheet.unit_amount
             
         return payroll_cost
-      
+    
+    def export_excel(self):
+        """Export dashboard data to Excel file"""
+        self.ensure_one()
+        
+        data = json.loads(self.dashboard_data)
+        project_data = data.get('project', {})
+        
+        output = io.BytesIO()
+        workbook = xlsxwriter.Workbook(output)
+        worksheet = workbook.add_worksheet("Project Dashboard")
+
+        # Define formats
+        title_format = workbook.add_format({
+            'bold': True,
+            'font_size': 16,
+            'align': 'left',
+            'valign': 'vcenter'
+        })
+        header_format = workbook.add_format({
+            'bold': True,
+            'font_size': 11,
+            'bg_color': '#4472C4',
+            'font_color': 'white',
+            'align': 'center',
+            'valign': 'vcenter',
+            'border': 1
+        })
+        section_header_format = workbook.add_format({
+            'bold': True,
+            'font_size': 12,
+            'bg_color': '#D9E1F2',
+            'align': 'left',
+            'border': 1
+        })
+        label_format = workbook.add_format({
+            'bold': True,
+            'font_size': 10,
+            'align': 'left'
+        })
+        currency_format = workbook.add_format({
+            'num_format': '#,##0.00',
+            'align': 'right'
+        })
+        cell_format = workbook.add_format({
+            'border': 1,
+            'align': 'left',
+            'valign': 'vcenter'
+        })
+        number_cell_format = workbook.add_format({
+            'border': 1,
+            'num_format': '#,##0.00',
+            'align': 'right',
+            'valign': 'vcenter'
+        })
+        summary_label_format = workbook.add_format({
+            'bold': True,
+            'bg_color': '#E7E6E6',
+            'border': 1,
+            'align': 'left'
+        })
+        summary_value_format = workbook.add_format({
+            'bold': True,
+            'bg_color': '#E7E6E6',
+            'border': 1,
+            'num_format': '#,##0.00',
+            'align': 'right'
+        })
+
+        # Set column widths
+        worksheet.set_column('A:A', 30)  # Description
+        worksheet.set_column('B:B', 12)  # Date
+        worksheet.set_column('C:H', 18)  # Financial columns
+
+        row = 0
+
+        # Title
+        worksheet.write(row, 0, f'Project Dashboard Report', title_format)
+        row += 2
+
+        # Project Information
+        worksheet.write(row, 0, 'Project Name:', label_format)
+        worksheet.write(row, 1, project_data.get('name', ''))
+        row += 1
+        
+        worksheet.write(row, 0, 'Customer:', label_format)
+        worksheet.write(row, 1, project_data.get('customer', ''))
+        row += 1
+        
+        worksheet.write(row, 0, 'Region:', label_format)
+        worksheet.write(row, 1, self.region or '')
+        row += 1
+        
+        worksheet.write(row, 0, 'Start Date:', label_format)
+        worksheet.write(row, 1, project_data.get('start_date', ''))
+        row += 1
+        
+        worksheet.write(row, 0, 'End Date:', label_format)
+        worksheet.write(row, 1, project_data.get('end_date', ''))
+        row += 1
+        
+        worksheet.write(row, 0, 'PO Value:', label_format)
+        worksheet.write(row, 1, project_data.get('po_value', 0.0), currency_format)
+        row += 2
+
+        # Project Summary Section
+        worksheet.write(row, 0, 'PROJECT SUMMARY', section_header_format)
+        row += 1
+
+        summary_items = [
+            ('Total Invoiced', project_data.get('total_invoiced', 0.0)),
+            ('Total Collected', project_data.get('total_collected', 0.0)),
+            ('Total Pending Collection', project_data.get('total_pending_collection', 0.0)),
+            ('Outstanding Aging (Days)', project_data.get('total_outstanding_aging', 0)),
+            ('Total Vendor Invoice', project_data.get('total_vendor_invoice', 0.0)),
+            ('Total Payment Made', project_data.get('total_payment_made', 0.0)),
+            ('Total Payment To Be Made', project_data.get('total_payment_to_be_made', 0.0)),
+            ('Total Payroll Cost', project_data.get('total_payroll_cost', 0.0)),
+        ]
+
+        for label, value in summary_items:
+            worksheet.write(row, 0, label, summary_label_format)
+            if 'Days' in label:
+                worksheet.write(row, 1, int(value), summary_label_format)
+            else:
+                worksheet.write(row, 1, value, summary_value_format)
+            row += 1
+
+        # Calculate Total Outgoing and Margin
+        total_outgoing = project_data.get('total_vendor_invoice', 0.0) + project_data.get('total_payroll_cost', 0.0)
+        total_margin = project_data.get('total_invoiced', 0.0) - total_outgoing
+        margin_percent = (total_margin / project_data.get('total_invoiced', 1.0)) * 100 if project_data.get('total_invoiced', 0.0) > 0 else 0.0
+
+        row += 1
+        worksheet.write(row, 0, 'Total Outgoing', summary_label_format)
+        worksheet.write(row, 1, total_outgoing, summary_value_format)
+        row += 1
+        
+        worksheet.write(row, 0, 'Total Margin', summary_label_format)
+        worksheet.write(row, 1, total_margin, summary_value_format)
+        row += 1
+        
+        worksheet.write(row, 0, 'Margin %', summary_label_format)
+        margin_format = workbook.add_format({
+            'bold': True,
+            'bg_color': '#E7E6E6',
+            'border': 1,
+            'num_format': '0.00%',
+            'align': 'right'
+        })
+        worksheet.write(row, 1, margin_percent / 100, margin_format)
+        row += 2
+
+        # Milestone Details Section
+        milestones = project_data.get('milestones', [])
+        
+        if milestones:
+            worksheet.write(row, 0, 'MILESTONE DETAILS', section_header_format)
+            row += 1
+
+            # Headers for milestones
+            milestone_headers = [
+                'Description',
+                'Date',
+                'Invoiced',
+                'Collected',
+                'Pending Collection',
+                'Outstanding Aging (Days)',
+                'Vendor Invoice',
+                'Payment Made',
+                'Payment To Be Made'
+            ]
+
+            for col, header in enumerate(milestone_headers):
+                worksheet.write(row, col, header, header_format)
+            
+            row += 1
+
+            # Milestone data rows
+            for milestone in milestones:
+                worksheet.write(row, 0, milestone.get('description', ''), cell_format)
+                worksheet.write(row, 1, milestone.get('date', ''), cell_format)
+                worksheet.write(row, 2, milestone.get('invoiced', 0.0), number_cell_format)
+                worksheet.write(row, 3, milestone.get('collected', 0.0), number_cell_format)
+                worksheet.write(row, 4, milestone.get('pending_collection', 0.0), number_cell_format)
+                worksheet.write(row, 5, milestone.get('outstanding_aging', 0), cell_format)
+                worksheet.write(row, 6, milestone.get('vendor_invoice', 0.0), number_cell_format)
+                worksheet.write(row, 7, milestone.get('payment_made', 0.0), number_cell_format)
+                worksheet.write(row, 8, milestone.get('payment_to_be_made', 0.0), number_cell_format)
+                row += 1
+
+        workbook.close()
+        output.seek(0)
+        file_data = output.read()
+
+        # Generate filename
+        project_name = self.project_id.name.replace('/', '_').replace(' ', '_') if self.project_id else 'project'
+        filename = f'dashboard_{project_name}_{fields.Date.today()}.xlsx'
+
+        attachment = self.env['ir.attachment'].create({
+            'name': filename,
+            'type': 'binary',
+            'datas': base64.b64encode(file_data),
+            'res_model': self._name,
+            'res_id': self.id,
+            'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        })
+
+        return {
+            'type': 'ir.actions.act_url',
+            'url': '/web/content/%s?download=true' % attachment.id,
+            'target': 'self',
+        }
 
 class L3DashboardController(http.Controller):
 
