@@ -8,3 +8,4 @@ access_l2_dashboard_user,l2.dashboard.user,model_l2_dashboard,base.group_user,1,
 access_l4_dashboard_user,l4.dashboard.user,model_l4_dashboard,base.group_user,1,1,1,1
 access_l3_dashboard_user,l3.dashboard.user,model_l3_dashboard,base.group_user,1,1,1,1
 access_druksmart_dashboard_reports_manager,druksmart_dashboard.reports.manager,model_druksmart_dashboard_reports,base.group_system,1,1,1,1
+access_l1_dashboard_demo_user,l1.dashboard_demo.user,model_l1_dashboard_demo,base.group_user,1,1,1,0

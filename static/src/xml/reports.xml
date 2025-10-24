@@ -1,0 +1,302 @@
+<templates>
+    <!-- Dashboard Reports -->
+    <t t-name="custom.druksmart_dashboard_reports" owl="1">
+        <div class="dashboard-wrapper">
+            <!-- Report Tabs -->
+            <div class="d-flex justify-content-start align-items-center flex-wrap mb-3 gap-3">
+                <div class="d-flex gap-2">
+                    <t t-foreach="['sales', 'revenue', 'expense', 'cashflow']" t-as="tab" t-key="tab">
+                        <button t-att-class="state.selectedCategory === tab ? 'btn btn-secondary' : 'btn btn-outline-secondary'" class="px-3 py-1 fw-bold" t-att-disabled="state.selectedCategory === tab" t-on-click="() => this.setCategory(tab)">
+                            <t t-esc="tab === 'expense' ? 'VENDOR BILLS' : tab.toUpperCase()" />
+                        </button>
+                    </t>
+                </div>
+            </div>
+
+
+            <t t-if="state.selectedCategory === 'cashflow'">
+                <div class="mb-2 p-2 bg-primary text-white fw-bold rounded">CashFlow Report</div>
+
+                <t t-set="groups" t-value="[
+                    { label: 'INFLOW - LOCAL', data: state.main_data.cashflows.inflows.locals },
+                    { label: 'INFLOW - EXPORT', data: state.main_data.cashflows.inflows.exports },
+                    { label: 'OUTFLOW - LOCAL', data: state.main_data.cashflows.outflows.locals },
+                    { label: 'OUTFLOW - EXPORT', data: state.main_data.cashflows.outflows.exports },
+                ]"/>
+
+                <t t-foreach="groups" t-as="section" t-key="section.label">
+                    <div class="card shadow-sm mb-4">
+                        <div
+                            class="bg-light px-3 py-2 fw-bold text-uppercase border-top border-bottom d-flex justify-content-between align-items-center"
+                            style="cursor: pointer"
+                            t-on-click="() => this.toggleGroup(section.label)"
+                        >
+                            <span>
+                                <i class="fa fa-caret-right me-1" t-if="!this.isGroupOpened(section.label)" />
+                                <i class="fa fa-caret-down me-1" t-if="this.isGroupOpened(section.label)" />
+                                <t t-esc="section.label" />
+                            </span>
+                            <span class="px-2 py-1 rounded bg-warning fw-bold">
+                                TOTAL:
+                                <t t-if="section.label === 'INFLOW - LOCAL'">
+                                    <t t-esc="state.main_data.total_local_cashflow_inflow" />
+                                </t>
+                                <t t-elif="section.label === 'INFLOW - EXPORT'">
+                                    <t t-esc="state.main_data.total_export_cashflow_inflow" />
+                                </t>
+                                <t t-elif="section.label === 'OUTFLOW - LOCAL'">
+                                    <t t-esc="state.main_data.total_local_cashflow_outflow"/>
+                                </t>
+                                <t t-elif="section.label === 'OUTFLOW - EXPORT'">
+                                    <t t-esc="state.main_data.total_export_cashflow_outflow" />
+                                </t>
+                            </span>
+                        </div>
+
+                        <t t-if="this.isGroupOpened(section.label)">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-bordered mb-0 dashboard-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Inflow/Outflow</th>
+                                            <th>Project</th>
+                                            <th>Local/Export</th>
+                                            <th>Tags</th>
+                                            <th>Source Document</th>
+                                            <th class="text-end">Payment Amount</th>
+                                            <th class="text-end">Payment Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="section.data" t-as="row" t-key="row.id">
+                                            <tr>
+                                                <td><t t-esc="row.date" /></td>
+                                                <td><t t-esc="row.inflow_outflow" /></td>
+                                                <td><t t-esc="row.project" /></td>
+                                                <td><t t-esc="row.local_export" /></td>
+                                                <td><t t-esc="row.tags" /></td>
+                                                <td><t t-esc="row.source_document" /></td>
+                                                <td class="text-end"><t t-esc="row.payment_amount" /></td>
+                                                <td class="text-end"><t t-esc="row.payment_status" /></td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </t>
+                    </div>
+                </t>
+            </t>
+
+            <t t-if="state.selectedCategory !== 'cashflow'">
+                <t t-set="categories" t-value="['sales', 'revenue', 'expense']" />
+                <t t-foreach="categories" t-as="cat" t-key="cat">
+                    <t t-if="state.selectedCategory === cat">
+                        <t t-set="groupedData" t-value="state.main_data['grouped_' + cat + 's']" />
+                        <t t-set="title" t-value="cat === 'expense' ? 'Vendor Bills Report' : cat.charAt(0).toUpperCase() + cat.slice(1) + ' Report'" />
+
+                        <div class="mb-2 p-2 bg-primary text-white fw-bold rounded d-flex justify-content-between align-items-center">
+                            <span><t t-esc="title" /></span>
+                            <div class="px-2 py-1 rounded bg-warning text-dark fw-bold">
+                                TOTAL: 
+                                <t t-if="state.selectedCategory === 'sales'">
+                                    <t t-esc="state.main_data.total_sales_untaxed" />
+                                </t>
+                                <t t-if="state.selectedCategory === 'revenue'">
+                                    <t t-esc="state.main_data.total_revenue_untaxed" />
+                                </t>
+                                <t t-if="state.selectedCategory === 'expense'">
+                                    <t t-esc="state.main_data.total_expense_untaxed" />
+                                </t>
+                            </div>
+                        </div>
+
+                        <div class="card shadow-sm">
+                            <div class="table-responsive">
+                                <t t-if="Object.keys(groupedData || {}).length === 0">
+                                    <div class="text-center py-4 text-muted">
+                                        <i class="fa fa-info-circle me-1" />
+                                No data available
+                                    </div>
+                                </t>
+
+                                <t t-foreach="Object.entries(groupedData || {})" t-as="group" t-key="group[0]">
+                                    <div class="bg-light px-3 py-2 fw-bold text-uppercase border-top border-bottom d-flex justify-content-between align-items-center" style="cursor: pointer" t-on-click="() => this.toggleGroup(group[0])">
+                                        <span>
+                                            <i class="fa fa-caret-right me-1" t-if="!this.isGroupOpened(group[0])" />
+                                            <i class="fa fa-caret-down me-1" t-if="this.isGroupOpened(group[0])" />
+                                            <t t-esc="group[0]" />
+                                        </span>
+                                        <span class="px-2 py-1 rounded bg-warning fw-bold">
+                                            TOTAL UNTAXED:
+                                            <t t-if="cat === 'sales'">
+                                                <t t-esc="state.main_data['total_sales_' + group[0].toLowerCase() + '_untaxed' + '_not_converted'] || '--'" />
+                                            </t>
+                                            <t t-elif="cat === 'revenue'">
+                                                <t t-esc="state.main_data['total_revenue_' + group[0].toLowerCase() + '_untaxed' + '_not_converted'] || '--'" />
+                                            </t>
+                                            <t t-elif="cat === 'expense'">
+                                                <t t-esc="state.main_data['total_expense_' + group[0].toLowerCase() + '_untaxed' + '_not_converted'] || '--'" />
+                                            </t>
+                                            TOTAL:
+                                            <t t-if="cat === 'sales'">
+                                                <t t-esc="state.main_data['total_sales_' + group[0].toLowerCase() + '_untaxed'] || '--'" />
+                                            </t>
+                                            <t t-elif="cat === 'revenue'">
+                                                <t t-esc="state.main_data['total_revenue_' + group[0].toLowerCase() + '_untaxed'] || '--'" />
+                                            </t>
+                                            <t t-elif="cat === 'expense'">
+                                                <t t-esc="state.main_data['total_expense_' + group[0].toLowerCase() + '_untaxed'] || '--'" />
+                                            </t>
+                                        </span>
+                                        
+                                    </div>
+
+                                    <t t-if="this.isGroupOpened(group[0])">
+                                        <table class="table table-striped table-hover mb-0 dashboard-table border-bottom">
+                                            <thead>
+                                                <tr class="bg-light">
+                                                    <t t-if="cat === 'sales'">
+                                                        <th>Date</th>
+                                                        <th>Sale Order No</th>
+                                                        <th>Tags</th>
+                                                        <th>Customer</th>
+                                                        <th>Sale Person</th>
+                                                        <th class="text-end">Untaxed Amount</th>
+                                                        <th class="text-end">Converted Amount</th>
+                                                    </t>
+                                                    <t t-if="cat === 'revenue'">
+                                                        <th>Date</th>
+                                                        <th>Invoice No</th>
+                                                        <th>Sale Order No</th>
+                                                        <th>Local/Export</th>
+                                                        <th>Tags</th>
+                                                        <th>Customer</th>
+                                                        <th class="text-end">Untaxed Amount</th>
+                                                        <th class="text-end">Payment Status</th>
+                                                    </t>
+                                                    <t t-if="cat === 'expense'">
+                                                        <th>Date</th>
+                                                        <th>Bill No</th>
+                                                        <th>Vendor</th>
+                                                        <th>Local/Export</th>
+                                                        <th>Tags</th>
+                                                        <th>Source Document</th>
+                                                        <th class="text-end">Tax Excluded</th>
+                                                        <th class="text-end">Payment Status</th>
+                                                    </t>
+                                                    <!-- <t t-if="cat === 'cashflow'">
+                            <th>Date</th>
+                            <th>Inflow/Outflow</th>
+                            <th>Project</th>
+                            <th>Local/Export</th>
+                            <th>Tags</th>
+                            <th>Source Document</th>
+                            <th class="text-end">Payment Amount</th>
+                            <th class="text-end">Payment Status</th>
+                            </t> -->
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <t t-foreach="group[1]" t-as="row" t-key="row.id">
+                                                    <tr>
+                                                        <t t-if="cat === 'sales'">
+                                                            <td>
+                                                                <t t-esc="row.date" />
+                                                            </td>
+                                                            <td>
+                                                                <t t-esc="row.sales_order_no" />
+                                                            </td>
+                                                            <td>
+                                                                <t t-esc="row.tags" />
+                                                            </td>
+                                                            <td>
+                                                                <t t-esc="row.customer" />
+                                                            </td>
+                                                            <td>
+                                                                <t t-esc="row.sale_person" />
+                                                            </td>
+                                                            <td class="text-end">
+                                                                <t t-esc="row.untaxed_amount" />
+                                                            </td>
+                                                            <td class="text-end">
+                                                                <t t-esc="row.converted_amount" />
+                                                            </td>
+                                                        </t>
+                                                        <t t-if="cat === 'revenue'">
+                                                            <td>
+                                                                <t t-esc="row.date" />
+                                                            </td>
+                                                            <td>
+                                                                <t t-esc="row.invoice_no" />
+                                                            </td>
+                                                            <td>
+                                                                <t t-esc="row.sales_order_no" />
+                                                            </td>
+                                                            <td>
+                                                                <t t-esc="row.local_export" />
+                                                            </td>
+                                                            <td>
+                                                                <t t-esc="row.tags" />
+                                                            </td>
+                                                            <td>
+                                                                <t t-esc="row.customer" />
+                                                            </td>
+                                                            <td class="text-end">
+                                                                <t t-esc="row.untaxed_amount" />
+                                                            </td>
+                                                            <td class="text-end">
+                                                                <t t-esc="row.payment_status" />
+                                                            </td>
+                                                        </t>
+                                                        <t t-if="cat === 'expense'">
+                                                            <td>
+                                                                <t t-esc="row.date" />
+                                                            </td>
+                                                            <td>
+                                                                <t t-esc="row.bill_no" />
+                                                            </td>
+                                                            <td>
+                                                                <t t-esc="row.vendor" />
+                                                            </td>
+                                                            <td>
+                                                                <t t-esc="row.local_export" />
+                                                            </td>
+                                                            <td>
+                                                                <t t-esc="row.tags" />
+                                                            </td>
+                                                            <td>
+                                                                <t t-esc="row.source_document" />
+                                                            </td>
+                                                            <td class="text-end">
+                                                                <t t-esc="row.tax_excluded" />
+                                                            </td>
+                                                            <td class="text-end">
+                                                                <t t-esc="row.payment_status" />
+                                                            </td>
+                                                        </t>
+                                                        <!-- <t t-if="cat === 'cashflow'">
+                                <td><t t-esc="row.date" /></td>
+                                <td><t t-esc="row.inflow_outflow" /></td>
+                                <td><t t-esc="row.project" /></td>
+                                <td><t t-esc="row.local_export" /></td>
+                                <td><t t-esc="row.tags" /></td>
+                                <td><t t-esc="row.source_document" /></td>
+                                <td class="text-end"><t t-esc="row.payment_amount" /></td>
+                                <td class="text-end"><t t-esc="row.payment_status" /></td>
+                            </t> -->
+                                                    </tr>
+                                                </t>
+                                            </tbody>
+                                        </table>
+                                    </t>
+                                </t>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </div>
+    </t>
+</templates>

@@ -29,6 +29,7 @@
         'views/l4_dashboard.xml',
         'views/sale_target.xml',
         'views/reports.xml',
+        'views/l1_dashboard.xml',
         'views/menu.xml',
     ],                            
     'images': ['static/description/icon.png'],

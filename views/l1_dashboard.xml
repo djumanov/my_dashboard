@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_l1_dashboard_form_demo" model="ir.ui.view">
+        <field name="name">l1.dashboard_demo.form</field>
+        <field name="model">l1.dashboard_demo</field>
+        <field name="arch" type="xml">
+            <form string="L1 Dashboard" class="o_l1_dashboard_form" create="0" edit="0" delete="0">
+                <style>
+                    .o_control_panel {
+                        border-bottom: 0;
+                        padding-top: 0;
+                        padding-right: 0;
+                        padding-bottom: 0;
+                        padding-left: 0;
+                        visibility: hidden;
+                        display: none;
+                    }
+
+                    /* Completely remove control panel */
+                    .o_l1_dashboard_form .o_form_statusbar {
+                        display: none !important;
+                    }
+                    
+                    .o_l1_dashboard_form .o_control_panel {
+                        display: none !important;
+                        height: 0 !important;
+                        min-height: 0 !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        border: 0 !important;
+                    }
+                    
+                    /* Remove control panel wrapper */
+                    .o_l1_dashboard_form .o_form_view .o_control_panel_main {
+                        display: none !important;
+                    }
+                    
+                    .o_l1_dashboard_form .o_form_view .o_control_panel_breadcrumbs {
+                        display: none !important;
+                    }
+                    
+                    .o_l1_dashboard_form .o_form_view .o_control_panel_actions {
+                        display: none !important;
+                    }
+                    
+                    /* Full width form without any wrapper padding */
+                    .o_l1_dashboard_form .o_form_sheet_bg {
+                        padding: 0 !important;
+                        background: #f8f9fa !important;
+                        margin: 0 !important;
+                    }
+                    
+                    .o_l1_dashboard_form .o_form_sheet {
+                        max-width: 100% !important;
+                        padding: 0 !important;
+                        box-shadow: none !important;
+                        margin: 0 !important;
+                        border: 0 !important;
+                    }
+                    
+                    /* Remove any form view padding */
+                    .o_l1_dashboard_form .o_form_view {
+                        padding: 0 !important;
+                        margin: 0 !important;
+                    }
+                    
+                    .o_l1_dashboard_form .o_content {
+                        padding: 0 !important;
+                    }
+                    
+                    /* Custom Dashboard Header */
+                    .dashboard_header {
+                        background: white;
+                        padding: 20px 30px;
+                        border-bottom: 1px solid #dee2e6;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                    }
+                    
+                    .dashboard_header h1 {
+                        margin: 0;
+                        font-size: 24px;
+                        font-weight: 600;
+                        color: #2c3e50;
+                    }
+                    
+                    .dashboard_filters {
+                        display: flex;
+                        align-items: center;
+                        gap: 15px;
+                    }
+                    
+                    .dashboard_filters .filter_label {
+                        margin: 0;
+                        font-weight: 500;
+                        color: #6c757d;
+                        white-space: nowrap;
+                        font-size: 14px;
+                    }
+                    
+                    .dashboard_filters .o_field_widget {
+                        min-width: 150px;
+                    }
+                    
+                    .dashboard_filters select {
+                        height: 38px !important;
+                        border: 1px solid #ced4da !important;
+                        border-radius: 4px !important;
+                        padding: 6px 12px !important;
+                        font-size: 14px !important;
+                    }
+                    
+                    /* Dashboard Content Area */
+                    .dashboard_content {
+                        padding: 0;
+                        min-height: calc(100vh - 120px);
+                        background: #f8f9fa;
+                    }
+                    
+                    .o_l1_dashboard_form .o_field_widget {
+                        width: 100% !important;
+                    }
+
+                    .o_form_nosheet {
+                        padding-top: 0 !important;
+                    }
+                </style>
+                
+                <div class="dashboard_header">
+                    <h1>
+                        <i class="fa fa-dashboard me-2" style="color: #875a7b;"/>
+                        L1 Dashboard
+                    </h1>
+                    <div class="dashboard_filters">
+                        <span class="filter_label">Year:</span>
+                        <field name="year" widget="selection" options="{'no_open': True}"/>
+                    </div>
+                </div>
+                
+                <div class="dashboard_content">
+                    <field name="dashboard_data" readonly="1" nolabel="1" widget="l1_dashboard"/>
+                </div>
+                
+                <!-- Hidden fields -->
+                <field name="company_id" groups="base.group_multi_company" invisible="1"/>
+                <field name="currency_id" invisible="1"/>
+            </form>
+        </field>
+    </record>
+
+    <!-- Dashboard Action -->
+    <record id="action_druksmart_dashboard_l1_dashboard" model="ir.actions.act_window">
+        <field name="name">L1 Dashboard</field>
+        <field name="res_model">l1.dashboard_demo</field>
+        <field name="view_mode">form</field>
+        <field name="target">current</field>
+        <field name="context">{'form_view_ref': 'my_dashboard.view_l1_dashboard_form_demo'}</field>
+    </record>
+</odoo>

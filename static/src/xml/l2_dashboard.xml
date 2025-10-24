@@ -1,0 +1,207 @@
+<templates>
+        <!-- L2 Dashboard Page -->
+    <t t-name="custom.l2_dashboard" owl="1">
+        <div class="l2-dashboard-container">
+        <!-- Loading -->
+        <div t-if="state.isLoading" class="text-center my-5">
+            <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading dashboard data...</p>
+        </div>
+    
+        <!-- Content -->
+        <div t-if="!state.isLoading" class="dashboard-content">
+            <div class="alert alert-danger" t-if="state.error">
+            <strong>Error:</strong>
+            <t t-esc="state.errorMessage"/>
+            </div>
+    
+            <div t-if="!state.error" class="dashboard-wrapper">
+            <!-- ====================== Sales Overview ====================== -->
+            <div class="row">
+                <div class="card-header section-header bg-l2 text-white w-100 text-center fw-bold">
+                  <h5 class="card-title mb-0">
+                    <i class="fa fa-chart-line me-2"/>
+                    Sales Overview
+                  </h5>
+                </div>
+            </div>
+    
+            <div class="row">
+                <div class="col-md-4 mb-4 px-2">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                    <h5 class="card-title mb-0">Total Sales</h5>
+                    </div>
+                    <div class="card-body">
+                    <div t-ref="totalSalesChart" class="chart-container" style="height: 300px;"></div>
+                    </div>
+                </div>
+                </div>
+    
+                <div class="col-md-4 mb-4 px-2">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                    <h5 class="card-title mb-0">Local Sales</h5>
+                    </div>
+                    <div class="card-body">
+                    <div t-ref="localSalesChart" class="chart-container" style="height: 300px;"></div>
+                    </div>
+                </div>
+                </div>
+    
+                <div class="col-md-4 mb-4 px-2">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                    <h5 class="card-title mb-0">Export Sales</h5>
+                    </div>
+                    <div class="card-body">
+                    <div t-ref="exportSalesChart" class="chart-container" style="height: 300px;"></div>
+                    </div>
+                </div>
+                </div>
+            </div>
+    
+            <!-- ====================== Revenue Overview ====================== -->
+            <div class="row">
+                <div class="card-header section-header bg-l2 text-white w-100 text-center fw-bold">
+                  <h5 class="card-title mb-0">
+                    <i class="fa fa-chart-line me-2"/>
+                    Revenue Overview
+                  </h5>
+                </div>
+            </div>
+              
+    
+            <div class="row">
+                <div class="col-md-4 mb-4 px-2">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                    <h5 class="card-title mb-0">Total Revenue</h5>
+                    </div>
+                    <div class="card-body">
+                    <div t-ref="totalRevenueChart" class="chart-container" style="height: 300px;"></div>
+                    </div>
+                </div>
+                </div>
+    
+                <div class="col-md-4 mb-4 px-2">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                    <h5 class="card-title mb-0">Local Revenue</h5>
+                    </div>
+                    <div class="card-body">
+                    <div t-ref="localRevenueChart" class="chart-container" style="height: 300px;"></div>
+                    </div>
+                </div>
+                </div>
+    
+                <div class="col-md-4 mb-4 px-2">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                    <h5 class="card-title mb-0">Export Revenue</h5>
+                    </div>
+                    <div class="card-body">
+                    <div t-ref="exportRevenueChart" class="chart-container" style="height: 300px;"></div>
+                    </div>
+                </div>
+                </div>
+            </div>
+    
+            <!-- ====================== Expenses Overview ====================== -->
+            <div class="row">
+                <div class="card-header section-header bg-l2 text-white w-100 text-center fw-bold">
+                  <h5 class="card-title mb-0">
+                    <i class="fa fa-chart-line me-2"/>
+                    Expenses Overview
+                  </h5>
+                </div>
+            </div>
+    
+            <div class="row">
+                <div class="col-md-4 mb-4 px-2">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                    <h5 class="card-title mb-0">Total Expenses</h5>
+                    </div>
+                    <div class="card-body">
+                    <div t-ref="totalExpensesChart" class="chart-container" style="height: 300px;"></div>
+                    </div>
+                </div>
+                </div>
+    
+                <div class="col-md-4 mb-4 px-2">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                    <h5 class="card-title mb-0">Local Expenses</h5>
+                    </div>
+                    <div class="card-body">
+                    <div t-ref="localExpensesChart" class="chart-container" style="height: 300px;"></div>
+                    </div>
+                </div>
+                </div>
+    
+                <div class="col-md-4 mb-4 px-2">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                    <h5 class="card-title mb-0">Export Expenses</h5>
+                    </div>
+                    <div class="card-body">
+                    <div t-ref="exportExpensesChart" class="chart-container" style="height: 300px;"></div>
+                    </div>
+                </div>
+                </div>
+            </div>
+    
+            <!-- ====================== CashFlow Overview ====================== -->
+            <div class="row">
+                <div class="card-header section-header bg-l2 text-white w-100 text-center fw-bold">
+                  <h5 class="card-title mb-0">
+                    <i class="fa fa-chart-line me-2"/>
+                    CashFlow Overview
+                  </h5>
+                </div>
+            </div>
+              
+    
+            <div class="row">
+                <div class="col-md-4 mb-4 px-2">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                    <h5 class="card-title mb-0">Total CashFlow</h5>
+                    </div>
+                    <div class="card-body">
+                    <div t-ref="totalCashFlowChart" class="chart-container" style="height: 300px;"></div>
+                    </div>
+                </div>
+                </div>
+    
+                <div class="col-md-4 mb-4 px-2">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                    <h5 class="card-title mb-0">Local CashFlow</h5>
+                    </div>
+                    <div class="card-body">
+                    <div t-ref="localCashFlowChart" class="chart-container" style="height: 300px;"></div>
+                    </div>
+                </div>
+                </div>
+    
+                <div class="col-md-4 mb-4 px-2">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                    <h5 class="card-title mb-0">Export CashFlow</h5>
+                    </div>
+                    <div class="card-body">
+                    <div t-ref="exportCashFlowChart" class="chart-container" style="height: 300px;"></div>
+                    </div>
+                </div>
+                </div>
+            </div>
+            <!-- ====================== /End ====================== -->
+            </div>
+        </div>
+        </div>
+    </t>
+</templates>

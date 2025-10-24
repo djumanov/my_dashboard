@@ -27,6 +27,14 @@
                             <h1 class="my-0" style="text-align: right;">HR Dashboard</h1>
                         </div>
 
+                        <div class="col-md-6 col-sm-12 d-flex justify-content-end">
+                            <button name="action_export_excel"
+                                    type="object"
+                                    string="Download Excel"
+                                    class="btn btn-sm btn-primary"
+                                    style="min-width: 160px;"/>
+                        </div>
+
                     </div>
 
                     <!-- Last update info aligned to right -->

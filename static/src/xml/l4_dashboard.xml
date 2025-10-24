@@ -1,0 +1,160 @@
+<templates>
+    <!-- L4 Dashboard Page -->
+    <t t-name="custom.l4_dashboard" owl="1">
+        <div class="dash l4-dashboard">
+        <!-- Filters/Search -->
+        <div class="dash__filters">
+            <div class="input-group search" style="max-width: 520px;">
+            <span class="input-group-text"><i class="fa fa-search"/></span>
+            <input type="text" class="form-control" placeholder="Search by project or customer..."
+                    t-on-input="(e) => this.handleSearch(e.target.value)" t-ref="searchInput"/>
+            <button class="btn btn-outline-secondary" type="button"
+                    t-on-click="() => this.clearSearch()" t-if="state.searchTerm">
+                <i class="fa fa-times"/>
+            </button>
+            </div>
+        </div>
+
+        <!-- Card + Table -->
+        <div class="card">
+            <!-- Section header in brand blue -->
+            <div class="card-header bg-l2 text-white">
+            <h5 class="card-title mb-0">
+                <i class="fa fa-chart-line me-2" />
+                L4 Dashboard&nbsp; Project Delivery Report
+            </h5>
+            </div>
+
+            <div class="table-wrap">
+            <table class="dash-table" t-ref="table">
+                <colgroup>
+                <col class="col-sticky"/>
+                <col class="col-project"/>
+                <col class="col-customer"/>
+                <col class="col-date"/>
+                <col class="col-num"/><!-- PO Value -->
+                <col class="col-num"/><!-- Invoiced -->
+                <col class="col-num"/><!-- Collected -->
+                <col class="col-num"/><!-- Pending Collection -->
+                <col class="col-aging"/><!-- OS Aging -->
+                <col class="col-num"/><!-- Vendor Invoice -->
+                <col class="col-num"/><!-- Payment Made -->
+                <col class="col-num"/><!-- Payment Pending -->
+                <col class="col-num"/><!-- Payroll Cost -->
+                <col class="col-num"/><!-- Total Outgoing -->
+                <col class="col-num"/><!-- Total Margin -->
+                <col class="col-num"/><!-- Margin % -->
+                </colgroup>
+
+                <!-- Make thead blue -->
+                <thead class="thead-l2">
+                <tr>
+                    <th class="sticky-col">Region</th>
+                    <th class="th-wrap">Project</th>
+                    <th class="th-wrap">Customer</th>
+                    <th class="th-wrap">Start Date</th>
+                    <th class="th-wrap num">PO Value</th>
+                    <th class="th-wrap num">Invoiced</th>
+                    <th class="th-wrap num">Collected</th>
+                    <th class="th-wrap num">Pending Collection</th>
+                    <th class="th-wrap num aging">OS Aging</th>
+                    <th class="th-wrap num">Vendor Invoice</th>
+                    <th class="th-wrap num">Payment Made</th>
+                    <th class="th-wrap num">Payment Pending</th>
+                    <th class="th-wrap num">Payroll Cost</th>
+                    <th class="th-wrap num">Total Outgoing</th>
+                    <th class="th-wrap num">Total Margin</th>
+                    <th class="th-wrap num">Margin %</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                <t t-if="!this.state.main_data.projects">
+                    <tr><td colspan="16" class="muted">No projects found matching the current filters</td></tr>
+                </t>
+
+                <t t-foreach="this.state.main_data.projects || []" t-as="row" t-key="row.project">
+                    <tr class="project-row">
+                    <td class="sticky-col">
+                        <span t-att-class="row.region === 'Local' ? 'badge-info badge' : 'badge-success badge'">
+                        <t t-esc="row.region"/>
+                        </span>
+                    </td>
+
+                    <td class="col-project" t-att-data-project-id="row.id"
+                        t-on-click="() => this.openProjectDetails(row.project_id)" style="cursor: pointer;">
+                        <t t-set="projLines" t-value="this.splitProjectIntoLines(row.project)"/>
+                        <t t-foreach="projLines" t-as="line" t-key="'proj-'+row.project+'-'+line_index">
+                        <span class="proj-line" t-esc="line"/>
+                        </t>
+                    </td>
+
+                    <td class="col-customer"><t t-esc="row.customer"/></td>
+                    <td class="col-date"><t t-esc="row.date"/></td>
+
+                    <td class="col-num"><t t-esc="this.fmt(row.po_value)"/></td>
+                    <td class="col-num"><t t-esc="this.fmt(row.invoiced)"/></td>
+                    <td class="col-num"><t t-esc="this.fmt(row.collected)"/></td>
+
+                    <td class="col-num" t-att-class="row._raw_pending_collection &gt; 0 ? 'col-num text-danger' : 'col-num'">
+                        <t t-esc="this.fmt(row.pending_collection)"/>
+                    </td>
+
+                    <td class="col-aging"><t t-esc="row.outstanding_aging"/></td>
+                    <td class="col-num"><t t-esc="this.fmt(row.vendor_invoice)"/></td>
+                    <td class="col-num"><t t-esc="this.fmt(row.payment_made)"/></td>
+                    <td class="col-num"><t t-esc="this.fmt(row.payment_to_be_made)"/></td>
+                    <td class="col-num text-danger"><t t-esc="this.fmt(row.payroll_cost)"/></td>
+                    <td class="col-num"><t t-esc="this.fmt(row.total_outgoing)"/></td>
+
+                    <td class="col-num" t-att-class="row._raw_total_margin &lt; 0 ? 'col-num text-danger' : 'col-num text-success'">
+                        <t t-esc="this.fmt(row.total_margin)"/>
+                    </td>
+                    <td class="col-num"
+                        t-att-class="row._raw_margin_percent &lt; 0 ? 'col-num text-danger' : (row._raw_margin_percent &gt;= 20 ? 'col-num text-success' : 'col-num')">
+                        <t t-esc="this.fmtPercent(row.margin_percent)"/>
+                    </td>
+                    </tr>
+                </t>
+
+                <!-- Totals -->
+                <tr class="bg-accent fw-bold">
+                    <td class="sticky-col text-start">Totals</td>
+                    <td colspan="3"><t t-esc="this.state.main_data.summary.project_count"/></td>
+
+                    <td class="col-num"><t t-esc="this.fmt(this.state.main_data.summary.total_po_value)"/></td>
+                    <td class="col-num"><t t-esc="this.fmt(this.state.main_data.summary.total_invoiced)"/></td>
+                    <td class="col-num"><t t-esc="this.fmt(this.state.main_data.summary.total_collected)"/></td>
+                    <td class="col-num"><t t-esc="this.fmt(this.state.main_data.summary.total_pending_collection)"/></td>
+
+                    <td class="col-aging">0</td>
+
+                    <td class="col-num"><t t-esc="this.fmt(this.state.main_data.summary.total_vendor_invoice)"/></td>
+                    <td class="col-num"><t t-esc="this.fmt(this.state.main_data.summary.total_payment_made)"/></td>
+                    <td class="col-num"><t t-esc="this.fmt(this.state.main_data.summary.total_payment_to_be_made)"/></td>
+                    <td class="col-num text-danger"><t t-esc="this.fmt(this.state.main_data.summary.total_payroll_cost)"/></td>
+                    <td class="col-num"><t t-esc="this.fmt(this.state.main_data.summary.total_outgoing)"/></td>
+                    <td class="col-num"><t t-esc="this.fmt(this.state.main_data.summary.total_margin)"/></td>
+                    <td class="col-num"
+                        t-att-class="this.state.main_data.summary._raw_avg_margin_percent &lt; 0 ? 'col-num text-danger' :
+                                    (this.state.main_data.summary._raw_avg_margin_percent &gt;= 20 ? 'col-num text-success' : 'col-num')">
+                    <t t-esc="this.fmtPercent(this.state.main_data.summary.avg_margin_percent)"/>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+
+            <div class="p-2 d-flex justify-content-between">
+            <div class="muted small">
+                <i class="fa fa-info-circle me-1"/> Click any project row for details
+            </div>
+            <div class="d-flex gap-3 small muted">
+                <div><span class="badge badge-info me-1">Local</span> Local</div>
+                <div><span class="badge badge-success me-1">Export</span> Export</div>
+            </div>
+            </div>
+        </div>
+        </div>
+    </t>
+</templates>

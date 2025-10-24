@@ -14,33 +14,65 @@
                         padding-left: 0;
                         visibility: hidden;
                     }
-                    .o_form_nosheet {
-                        padding-top: 0;
+                    .o_form_nosheet { padding-top: 0; }
+
+                    /* --- Header polish --- */
+                    .l4-header {
+                        padding: .35rem 0 .75rem;
+                        border-bottom: 1px solid #e9eef5;
+                    }
+                    .l4-header .page-title {
+                        font-weight: 700;
+                        letter-spacing: .2px;
+                    }
+                    .l4-header .back-pill {
+                        border-color: #e2e8f0;
+                        background: #fff;
+                        transition: box-shadow .15s ease, transform .15s ease;
+                    }
+                    .l4-header .back-pill:hover {
+                        box-shadow: 0 6px 14px rgba(15, 23, 42, .08);
+                        transform: translateY(-1px);
+                    }
+                    .l4-header .back-pill:active { transform: translateY(0); }
+                    @media (max-width: 767.98px) {
+                        .l4-header .page-title { font-size: 1.4rem; }
                     }
                 </style>
+
                 <div class="o_form_view_container" style="width: 100%; margin: auto;">
-                    <!-- Header section with Dashboard title on the left and filters on the right -->
-                    <div class="row align-items-center mt-3 mb-2">
-                        
-                        <!-- Left side (Dashboard Title) -->
-                        <div class="col-md-6 col-sm-12 text-start">
-                            <h1 class="my-0" style="text-align: right;">L4 Project Information</h1>
+                    <!-- Header -->
+                    <div class="row g-3 align-items-center l4-header mb-2">
+                        <!-- Left: Back button -->
+                        <div class="col-12 col-md-4 d-flex">
+                            <button name="action_go_back"
+                                    type="object"
+                                    class="btn btn-outline-secondary rounded-pill shadow-sm d-inline-flex align-items-center back-pill">
+                                <i class="fa fa-chevron-left me-2"></i>
+                                <span class="fw-semibold d-none d-sm-inline">Back to L3</span>
+                            </button>
                         </div>
 
-                        <!-- Right side (Filters) -->
-                        <div class="col-md-6 col-sm-12 d-flex flex-wrap justify-content-center justify-content-start" style="gap: 10px; text-align: center;">
-                            <div class="align-self-end d-flex gap-2">
-                                <button name="export_excel" type="object" string="Download Excel" class="btn btn-sm btn-primary" style="min-width: 160px;" />
-                            </div>
+                        <!-- Center: Title -->
+                        <div class="col-12 col-md-4 text-center">
+                            <h1 class="my-0 page-title">L4 Project Information</h1>
                         </div>
 
+                        <!-- Right: Download -->
+                        <div class="col-12 col-md-4 d-flex justify-content-md-end">
+                            <button name="export_excel"
+                                    type="object"
+                                    class="btn btn-success rounded-pill shadow-sm">
+                                <i class="fa fa-download me-2"></i> Download Excel
+                            </button>
+                        </div>
                     </div>
-                    
+
                     <!-- Dashboard content -->
                     <field name="dashboard_data" widget="l3_dashboard" nolabel="1" readonly="1"/>
-                    
+
                     <!-- Hidden fields -->
-                     <field name="project_id" invisible="1"/>
+                    <field name="project_id" invisible="1"/>
                 </div>
             </form>
         </field>
@@ -52,7 +84,8 @@
         <field name="res_model">l3.dashboard</field>
         <field name="view_mode">form</field>
         <field name="view_id" ref="view_l3_dashboard_form"/>
-        <field name="context">{'default_project_id': active_project_id}</field>
+        <!-- Use active_id safely; remove active_project_id error -->
+        <field name="context">{'default_project_id': active_id}</field>
         <field name="target">current</field>
     </record>
 </odoo>

@@ -804,3 +804,22 @@ class L4Dashboard(models.Model):
             'url': '/web/content/%s?download=true' % attachment.id,
             'target': 'self',
         }
+        
+        
+        
+        
+    def action_back_to_l2(self):
+        """Go back to L2 dashboard."""
+        self.ensure_one()
+        # Preferred: use the XML-ID of the L2 action if available.
+        # Replace 'my_dashboard.action_l2_dashboard' with the real module XML-ID.
+        try:
+            action = self.env.ref('my_dashboard.action_l2_dashboard').read()[0]
+            return action
+        except Exception:
+            # Fallback to the URL you provided (action=947).
+            return {
+                'type': 'ir.actions.act_url',
+                'url': '/web#action=947&model=l2.dashboard&view_type=form',
+                'target': 'self',
+            }

@@ -393,14 +393,6 @@ class DashboardReports(models.Model):
         local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
         export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
 
-        # Find projects with respective tags
-        local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])]) if local_tag else self.env['project.project']
-        export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])]) if export_tag else self.env['project.project']
-
-        # Get analytic account IDs
-        local_analytic_account_ids = local_projects.mapped('analytic_account_id').ids
-        export_analytic_account_ids = export_projects.mapped('analytic_account_id').ids
-
         # Get posted customer invoices in the date range
         invoice_domain = [
             ('invoice_date', '>=', start_date),
@@ -412,13 +404,12 @@ class DashboardReports(models.Model):
         customer_invoices = self.env['account.move'].search(invoice_domain)
 
         revenues = []
-        total_local_revenue_untaxed = 0.0
-        total_export_revenue_untaxed = 0.0
-        total_other_revenue_untaxed = 0.0  # Added Other category total
-
-        total_local_revenue_untaxed_not_converted = 0.0
-        total_export_revenue_untaxed_not_converted = 0.0
-        total_other_revenue_untaxed_not_converted = 0.0  # Added Other category total
+        total_local_revenue = 0.0
+        total_export_revenue = 0.0
+        total_other_revenue = 0.0
+        total_local_revenue_signed = 0.0
+        total_export_revenue_signed = 0.0
+        total_other_revenue_signed = 0.0
 
         payment_state_mapping = {
             'paid': 'Paid',
@@ -431,106 +422,112 @@ class DashboardReports(models.Model):
         revenue_id_counter = 1
 
         for invoice in customer_invoices:
-            invoice_categories = set()
-            invoice_tags = set()
-            invoice_amount_used = False
+            # Skip if no valid date
+            if not invoice.invoice_date:
+                _logger.warning(f"Invoice {invoice.name} has no valid date, skipping")
+                continue
 
-            for line in invoice.invoice_line_ids:
-                if line.price_subtotal <= 0:
-                    continue
+            # Get the invoice's untaxed amount
+            invoice_amount = invoice.amount_untaxed_signed
+            invoice_amount_signed = invoice.amount_total_signed
+            
+            # Skip zero or negative amount invoices
+            if invoice_amount <= 0:
+                continue
 
-                line_categories = set()
-                line_tags = set()
+            # Find linked project
+            linked_project = None
+            invoice_category = "Other"
+            invoice_tags = []
 
-                if line.analytic_distribution:
-                    try:
-                        distribution = line.analytic_distribution
-                        if isinstance(distribution, str):
-                            distribution = json.loads(distribution)
-                        elif not isinstance(distribution, dict):
-                            continue
+            # Method 1: Check if invoice has direct project_id field
+            if hasattr(invoice, 'project_id') and invoice.project_id:
+                linked_project = invoice.project_id
+            
+            # Method 2: Try to find project from invoice_origin (Sale Order)
+            elif invoice.invoice_origin:
+                sale_order = self.env['sale.order'].search([
+                    ('name', '=', invoice.invoice_origin)
+                ], limit=1)
+                
+                if sale_order and hasattr(sale_order, 'project_id') and sale_order.project_id:
+                    linked_project = sale_order.project_id
+            
+            # Method 3: Check analytic account on invoice lines to find project
+            if not linked_project:
+                # Get analytic accounts from invoice lines
+                analytic_account_ids = set()
+                for line in invoice.invoice_line_ids:
+                    if line.analytic_distribution:
+                        try:
+                            distribution = line.analytic_distribution
+                            if isinstance(distribution, str):
+                                distribution = json.loads(distribution)
                             
-                        for account_id_str, percentage in distribution.items():
-                            account_id = int(account_id_str)
-                        
-                            if account_id in local_analytic_account_ids:
-                                line_categories.add("Local")
-                                project = local_projects.filtered(lambda p: p.analytic_account_id.id == account_id)
-                                if project and project.tag_ids:
-                                    line_tags.update(project.tag_ids.mapped('name'))
-                                    
-                            elif account_id in export_analytic_account_ids:
-                                line_categories.add("Export")
-                                project = export_projects.filtered(lambda p: p.analytic_account_id.id == account_id)
-                                if project and project.tag_ids:
-                                    line_tags.update(project.tag_ids.mapped('name'))
-                            else:
-                                # Analytic account exists but is not Local or Export
-                                line_categories.add("Other")
-                                # Try to find project with this analytic account for tags
-                                project = self.env['project.project'].search([
-                                    ('analytic_account_id', '=', account_id)
-                                ], limit=1)
-                                if project and project.tag_ids:
-                                    line_tags.update(project.tag_ids.mapped('name'))
-                                                
-                    except Exception as e:
-                        _logger.error("Error processing analytic distribution for invoice %s, line %s: %s", 
-                                    invoice.id, line.id, str(e))
-                        # If there's an error processing analytic distribution, treat as Other
-                        line_categories.add("Other")
+                            if isinstance(distribution, dict):
+                                analytic_account_ids.update([int(acc_id) for acc_id in distribution.keys()])
+                        except Exception as e:
+                            _logger.error(f"Error parsing analytic distribution for invoice {invoice.name}: {e}")
+                
+                # Find project with matching analytic account
+                if analytic_account_ids:
+                    linked_project = self.env['project.project'].search([
+                        ('analytic_account_id', 'in', list(analytic_account_ids))
+                    ], limit=1)
+
+            # Determine category based on project tags
+            if linked_project and linked_project.tag_ids:
+                project_tag_names = linked_project.tag_ids.mapped('name')
+                invoice_tags = project_tag_names
+                
+                if local_tag and local_tag.name in project_tag_names:
+                    invoice_category = "Local"
+                elif export_tag and export_tag.name in project_tag_names:
+                    invoice_category = "Export"
                 else:
-                    # No analytic distribution, treat as Other
-                    line_categories.add("Other")
-
-                # Collect all categories and tags from this line
-                invoice_categories.update(line_categories)
-                invoice_tags.update(line_tags)
-
-            # Determine the final category for this invoice
-            if len(invoice_categories) == 1:
-                final_category = list(invoice_categories)[0]
-            elif len(invoice_categories) > 1:
-                final_category = "Mixed"  # Has multiple categories
+                    invoice_category = "Other"
             else:
-                final_category = "Other"  # Fallback
+                invoice_category = "Other"
+                invoice_tags = []
 
             # Add revenue entry
             revenues.append({
                 "id": revenue_id_counter,
-                "date": invoice.invoice_date.strftime('%Y-%m-%d') if invoice.invoice_date else '',
+                "date": invoice.invoice_date.strftime('%Y-%m-%d'),
                 "invoice_no": invoice.name,
                 "sales_order_no": invoice.invoice_origin or '',
-                "local_export": final_category,
-                "tags": ', '.join(sorted(invoice_tags)),
+                "local_export": invoice_category,
+                "tags": ', '.join(sorted(invoice_tags)) if invoice_tags else '',
                 "customer": invoice.partner_id.name or '',
-                "untaxed_amount": self._format_amount(invoice.amount_untaxed_signed),
-                "payment_status": payment_state_mapping.get(invoice.payment_state, invoice.payment_state) or '',
+                "untaxed_amount": self._format_amount(invoice_amount),
+                "payment_status": payment_state_mapping.get(invoice.payment_state, invoice.payment_state or ''),
+                "project": linked_project.name if linked_project else '',
             })
             revenue_id_counter += 1
 
-            # Update totals
-            if final_category == "Local":
-                total_local_revenue_untaxed += invoice.amount_untaxed_signed
-                total_local_revenue_untaxed_not_converted += invoice.amount_untaxed_signed
-            elif final_category == "Export":
-                total_export_revenue_untaxed += invoice.amount_untaxed_signed
-                total_export_revenue_untaxed_not_converted += invoice.amount_untaxed_signed
-            else:  # Other, Mixed, or any other category
-                total_other_revenue_untaxed += invoice.amount_untaxed_signed
-                total_other_revenue_untaxed_not_converted += invoice.amount_untaxed_signed
+            # Update category totals
+            if invoice_category == "Local":
+                total_local_revenue += invoice_amount
+                total_local_revenue_signed += invoice_amount_signed
+            elif invoice_category == "Export":
+                total_export_revenue += invoice_amount
+                total_export_revenue_signed += invoice_amount_signed
+            else:
+                total_other_revenue += invoice_amount
+                total_other_revenue_signed += invoice_amount_signed
 
-        total_revenue_untaxed = total_export_revenue_untaxed + total_other_revenue_untaxed + total_local_revenue_untaxed
+        total_revenue = total_local_revenue + total_export_revenue + total_other_revenue
+        total_revenue_signed = total_local_revenue_signed + total_export_revenue_signed + total_other_revenue_signed
 
         return {
             'revenues': revenues,
-            'total_local_revenue_untaxed': self._format_amount(total_local_revenue_untaxed),
-            'total_export_revenue_untaxed': self._format_amount(total_export_revenue_untaxed),
-            'total_other_revenue_untaxed': self._format_amount(total_other_revenue_untaxed),  # Added Other total
-            'total_local_revenue_untaxed_not_converted': self._format_amount(total_local_revenue_untaxed_not_converted),
-            'total_export_revenue_untaxed_not_converted': self._format_amount(total_export_revenue_untaxed_not_converted),
-            'total_other_revenue_untaxed_not_converted': self._format_amount(total_other_revenue_untaxed_not_converted),  # Added Other total
-            'total_revenue_untaxed': self._format_amount(total_revenue_untaxed)  # Added Other total
+            'total_local_revenue_untaxed': self._format_amount(total_local_revenue_signed),
+            'total_export_revenue_untaxed': self._format_amount(total_export_revenue_signed),
+            'total_other_revenue_untaxed': self._format_amount(total_other_revenue_signed),
+            'total_local_revenue_untaxed_not_converted': self._format_amount(total_local_revenue),
+            'total_export_revenue_untaxed_not_converted': self._format_amount(total_export_revenue),
+            'total_other_revenue_untaxed_not_converted': self._format_amount(total_other_revenue),
+            'total_revenue_untaxed': self._format_amount(total_revenue_signed)
         }
 
     def get_expense_data(self, start_date, end_date):
@@ -539,15 +536,7 @@ class DashboardReports(models.Model):
         local_tag = self.env['project.tags'].search([('name', '=', 'Local')], limit=1)
         export_tag = self.env['project.tags'].search([('name', '=', 'Export')], limit=1)
 
-        # Find projects with respective tags
-        local_projects = self.env['project.project'].search([('tag_ids', 'in', [local_tag.id])]) if local_tag else self.env['project.project']
-        export_projects = self.env['project.project'].search([('tag_ids', 'in', [export_tag.id])]) if export_tag else self.env['project.project']
-
-        # Get analytic account IDs
-        local_analytic_account_ids = local_projects.mapped('analytic_account_id').ids
-        export_analytic_account_ids = export_projects.mapped('analytic_account_id').ids
-
-        # Get posted vendor bills in the date range - use 'date' field for vendor bills
+        # Get posted vendor bills in the date range
         bill_domain = [
             ('date', '>=', start_date),
             ('date', '<=', end_date),
@@ -558,13 +547,12 @@ class DashboardReports(models.Model):
         vendor_bills = self.env['account.move'].search(bill_domain)
 
         expenses = []
-        total_local_expense_untaxed = 0.0
-        total_export_expense_untaxed = 0.0
-        total_other_expense_untaxed = 0.0  # Added Other category total
-
-        total_local_expense_untaxed_not_converted = 0.0
-        total_export_expense_untaxed_not_converted = 0.0
-        total_other_expense_untaxed_not_converted = 0.0  # Added Other category total
+        total_local_expense = 0.0
+        total_export_expense = 0.0
+        total_other_expense = 0.0
+        total_local_expense_signed = 0.0
+        total_export_expense_signed = 0.0
+        total_other_expense_signed = 0.0
 
         payment_state_mapping = {
             'paid': 'Paid',
@@ -574,132 +562,122 @@ class DashboardReports(models.Model):
             'reversed': 'Reversed',
         }
 
-        company_currency = self.env.company.currency_id
-
         expense_id_counter = 1
 
         for bill in vendor_bills:
-            # Get bill currency
-            bill_currency = bill.currency_id
-            bill_date = bill.invoice_date or bill.date
-
-            bill_categories = set()
-            bill_tags = set()
-            bill_total_amount = 0.0
-
-            for line in bill.line_ids:
-                # Skip lines that are not expense lines (like tax lines)
-                if line.account_id.account_type not in ['expense', 'asset_prepaid_expenses', 'asset_current', 'asset_non_current', 'asset_fixed']:
-                    continue
-
-                line_categories = set()
-                line_tags = set()
-                
-                # Convert line amount to company currency
-                if bill_currency != company_currency:
-                    amount_in_company_currency = bill_currency._convert(
-                        abs(line.debit - line.credit),  # Use debit-credit for proper amount
-                        company_currency,
-                        self.env.company,
-                        bill_date
-                    )
-                else:
-                    amount_in_company_currency = abs(line.debit - line.credit)
-
-                # Ensure analytic distribution exists and is processed correctly
-                if line.analytic_distribution:
-                    try:
-                        # Convert to dictionary if it's a string
-                        distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
-                            else eval(line.analytic_distribution)
-                        
-                        # Check each analytic account in the distribution
-                        for account_id, percentage in distribution.items():
-                            account_id = int(account_id)  # Ensure integer
-                            
-                            # Check if the account is in local, export, or other project accounts
-                            if account_id in local_analytic_account_ids:
-                                line_categories.add("Local")
-                                project = local_projects.filtered(lambda p: p.analytic_account_id.id == account_id)
-                                if project and project.tag_ids:
-                                    line_tags.update(project.tag_ids.mapped('name'))
-
-                            elif account_id in export_analytic_account_ids:
-                                line_categories.add("Export")
-                                project = export_projects.filtered(lambda p: p.analytic_account_id.id == account_id)
-                                if project and project.tag_ids:
-                                    line_tags.update(project.tag_ids.mapped('name'))
-                            else:
-                                # Analytic account exists but is not Local or Export
-                                line_categories.add("Other")
-                                # Try to find project with this analytic account for tags
-                                project = self.env['project.project'].search([
-                                    ('analytic_account_id', '=', account_id)
-                                ], limit=1)
-                                if project and project.tag_ids:
-                                    line_tags.update(project.tag_ids.mapped('name'))
-                    
-                    except Exception as e:
-                        _logger.error(f"Error processing analytic distribution for bill {bill.id}, line {line.id}: {e}")
-                        # If there's an error processing analytic distribution, treat as Other
-                        line_categories.add("Other")
-                else:
-                    # No analytic distribution, treat as Other
-                    line_categories.add("Other")
-
-                # Collect all categories and tags from this line
-                bill_categories.update(line_categories)
-                bill_tags.update(line_tags)
-                bill_total_amount += amount_in_company_currency
-
-            # Skip bills with no expense lines or zero amount
-            if not bill_categories or bill_total_amount <= 0:
+            # Skip if no valid date
+            if not bill.date:
+                _logger.warning(f"Bill {bill.name} has no valid date, skipping")
                 continue
 
-            # Determine the final category for this bill
-            if len(bill_categories) == 1:
-                final_category = list(bill_categories)[0]
-            elif len(bill_categories) > 1:
-                final_category = "Mixed"  # Has multiple categories
+            # Get the bill's untaxed amount (use absolute value for vendor bills)
+            bill_amount = abs(bill.amount_untaxed_signed)
+            bill_amount_signed = abs(bill.amount_total_signed)
+            
+            # Skip zero amount bills
+            if bill_amount <= 0:
+                continue
+
+            # Find linked project (assuming there's a project_id field on account.move)
+            # If not directly available, we need to check the source document or other relation
+            linked_project = None
+            bill_category = "Other"
+            bill_tags = []
+
+            # Method 1: Check if bill has direct project_id field
+            if hasattr(bill, 'project_id') and bill.project_id:
+                linked_project = bill.project_id
+            
+            # Method 2: Try to find project from invoice_origin (like SO001, PO001, etc.)
+            elif bill.invoice_origin:
+                # Try to find purchase order with this reference
+                purchase_order = self.env['purchase.order'].search([
+                    ('name', '=', bill.invoice_origin)
+                ], limit=1)
+                
+                if purchase_order and hasattr(purchase_order, 'project_id') and purchase_order.project_id:
+                    linked_project = purchase_order.project_id
+                else:
+                    # Try to find sale order
+                    sale_order = self.env['sale.order'].search([
+                        ('name', '=', bill.invoice_origin)
+                    ], limit=1)
+                    if sale_order and hasattr(sale_order, 'project_id') and sale_order.project_id:
+                        linked_project = sale_order.project_id
+            
+            # Method 3: Check analytic account on bill lines to find project
+            if not linked_project:
+                # Get analytic accounts from bill lines
+                analytic_account_ids = set()
+                for line in bill.invoice_line_ids:
+                    if line.analytic_distribution:
+                        try:
+                            distribution = line.analytic_distribution if isinstance(line.analytic_distribution, dict) \
+                                else eval(line.analytic_distribution)
+                            analytic_account_ids.update([int(acc_id) for acc_id in distribution.keys()])
+                        except Exception as e:
+                            _logger.error(f"Error parsing analytic distribution for bill {bill.name}: {e}")
+                
+                # Find project with matching analytic account
+                if analytic_account_ids:
+                    linked_project = self.env['project.project'].search([
+                        ('analytic_account_id', 'in', list(analytic_account_ids))
+                    ], limit=1)
+
+            # Determine category based on project tags
+            if linked_project and linked_project.tag_ids:
+                project_tag_names = linked_project.tag_ids.mapped('name')
+                bill_tags = project_tag_names
+                
+                if local_tag and local_tag.name in project_tag_names:
+                    bill_category = "Local"
+                elif export_tag and export_tag.name in project_tag_names:
+                    bill_category = "Export"
+                else:
+                    bill_category = "Other"
             else:
-                final_category = "Other"  # Fallback
+                bill_category = "Other"
+                bill_tags = []
 
             # Add expense entry
             expenses.append({
                 "id": expense_id_counter,
-                "date": bill.date.strftime('%Y-%m-%d') if bill.date else '',
+                "date": bill.date.strftime('%Y-%m-%d'),
                 "bill_no": bill.name,
                 "vendor": bill.partner_id.name or '',
-                "local_export": final_category,
-                "tags": ', '.join(sorted(bill_tags)),
+                "local_export": bill_category,
+                "tags": ', '.join(sorted(bill_tags)) if bill_tags else '',
                 "source_document": bill.invoice_origin or '',
-                "tax_excluded": self._format_amount(bill_total_amount),
-                "payment_status": payment_state_mapping.get(bill.payment_state, bill.payment_state) or '',
+                "tax_excluded": self._format_amount(bill_amount),
+                "payment_status": payment_state_mapping.get(bill.payment_state, bill.payment_state or ''),
+                "project": linked_project.name if linked_project else '',
             })
             expense_id_counter += 1
 
-            # Update totals
-            if final_category == "Local":
-                total_local_expense_untaxed += bill_total_amount
-                total_local_expense_untaxed_not_converted += bill_total_amount
-            elif final_category == "Export":
-                total_export_expense_untaxed += bill_total_amount
-                total_export_expense_untaxed_not_converted += bill_total_amount
-            else:  # Other, Mixed, or any other category
-                total_other_expense_untaxed += bill_total_amount
-                total_other_expense_untaxed_not_converted += bill_total_amount
+            # Update category totals
+            if bill_category == "Local":
+                total_local_expense += bill_amount
+                total_local_expense_signed += bill_amount_signed
+            elif bill_category == "Export":
+                total_export_expense += bill_amount
+                total_export_expense_signed += bill_amount_signed
+            else:
+                total_other_expense += bill_amount
+                total_other_expense_signed += bill_amount_signed
 
-        total_expense_untaxed = total_export_expense_untaxed + total_local_expense_untaxed + total_other_expense_untaxed
+        # total_expense = total_local_expense + total_export_expense + total_other_expense
+        total_expense_signed = total_local_expense_signed + total_export_expense_signed + total_other_expense_signed
 
         return {
             'expenses': expenses,
-            'total_expenses_local_untaxed': self._format_amount(total_local_expense_untaxed),
-            'total_expenses_export_untaxed': self._format_amount(total_export_expense_untaxed),
-            'total_expenses_other_untaxed': self._format_amount(total_other_expense_untaxed),  # Added Other total
-            'total_expenses_local_untaxed_not_converted': self._format_amount(total_local_expense_untaxed_not_converted),
-            'total_expenses_export_untaxed_not_converted': self._format_amount(total_export_expense_untaxed_not_converted),
-            'total_expenses_other_untaxed_not_converted': self._format_amount(total_other_expense_untaxed_not_converted),  # Added Other total
-            'total_expense_untaxed': self._format_amount(total_expense_untaxed),  # Added Other total
+            'total_expenses_local_untaxed': self._format_amount(total_local_expense_signed),
+            'total_expenses_export_untaxed': self._format_amount(total_export_expense_signed),
+            'total_expenses_other_untaxed': self._format_amount(total_other_expense_signed),
+            'total_expenses_local_untaxed_not_converted': self._format_amount(total_local_expense),
+            'total_expenses_export_untaxed_not_converted': self._format_amount(total_export_expense),
+            'total_expenses_other_untaxed_not_converted': self._format_amount(total_other_expense),
+            'total_expense_untaxed': self._format_amount(total_expense_signed),
+            # 'total_expense_signed': self._format_amount(),
         }
 
     def get_cashflow_data(self, start_date, end_date):

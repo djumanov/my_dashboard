@@ -12,22 +12,14 @@ from odoo.tools.misc import xlsxwriter
 
 _logger = logging.getLogger(__name__)
 
+
 class L1Dashboard(models.Model):
-    _name = 'l1.dashboard'
+    _name = 'l1.dashboard_demo'
     _description = 'L1 Dashboard Data'
 
     name = fields.Char(string='Dashboard Name', default='L1 Dashboard')
-    month = fields.Selection([
-        ('1', 'January'), ('2', 'February'), ('3', 'March'), ('4', 'April'),
-        ('5', 'May'), ('6', 'June'), ('7', 'July'), ('8', 'August'),
-        ('9', 'September'), ('10', 'October'), ('11', 'November'), ('12', 'December'),
-    ])
-    quarter = fields.Selection(
-        [('Q1', 'Quarter 1'), ('Q2', 'Quarter 2'), ('Q3', 'Quarter 3'), ('Q4', 'Quarter 4')]
-    )
     
     dashboard_data = fields.Text(string='Dashboard Data', compute='_compute_dashboard_data')
-    dashboard_data_array = fields.Text(string='D')
     last_update = fields.Datetime(string='Last Update')
     
     company_id = fields.Many2one('res.company', string='Company', default=lambda self: self.env.company)
@@ -43,30 +35,26 @@ class L1Dashboard(models.Model):
         default=lambda self: str(fields.Date.today().year)
     )
 
-    @api.depends('year', 'month', 'company_id', "quarter")
+    @api.depends('year', 'company_id')
     def _compute_dashboard_data(self):
         for record in self:
             record.dashboard_data = json.dumps(record._get_dashboard_data())
             record.last_update = fields.Datetime.now()
 
     @api.model
-    def get_dashboard_data_json(self, year=None, month=None, quarter=None):
+    def get_dashboard_data_json(self, year=None):
         """API method to get dashboard data in JSON format"""
         if not year:
             year = fields.Date.today().year
             
         dashboard = self.search([
             ('year', '=', year),
-            ('month', '=', month),
-            ('quarter', '=', quarter),
             ('company_id', '=', self.env.company.id)
         ], limit=1)
         
         if not dashboard:
             dashboard = self.create({
                 'year': year,
-                'month': month,
-                'quarter': quarter,
             })
         
         dashboard._compute_dashboard_data()
@@ -76,36 +64,10 @@ class L1Dashboard(models.Model):
         """Compute dashboard data **without** mutating year/month/quarter selections."""
         self.ensure_one()
 
-        # keep current selections
-        sel_month = int(self.month) if self.month else 0
         sel_year = int(self.year) if self.year else datetime.now().year
-        sel_quarter = self.quarter
 
-        # compute bounds using locals only
-        if sel_quarter == 'Q1':
-            start_date = fields.Date.to_string(datetime(sel_year, 1, 1))
-            end_date   = fields.Date.to_string(datetime(sel_year, 3, 31))
-            month_for_label = None
-        elif sel_quarter == 'Q2':
-            start_date = fields.Date.to_string(datetime(sel_year, 4, 1))
-            end_date   = fields.Date.to_string(datetime(sel_year, 6, 30))
-            month_for_label = None
-        elif sel_quarter == 'Q3':
-            start_date = fields.Date.to_string(datetime(sel_year, 7, 1))
-            end_date   = fields.Date.to_string(datetime(sel_year, 9, 30))
-            month_for_label = None
-        elif sel_quarter == 'Q4':
-            start_date = fields.Date.to_string(datetime(sel_year, 10, 1))
-            end_date   = fields.Date.to_string(datetime(sel_year, 12, 31))
-            month_for_label = None
-        elif sel_month == 0:  # full year
-            start_date = fields.Date.to_string(datetime(sel_year, 1, 1))
-            end_date   = fields.Date.to_string(datetime(sel_year, 12, 31))
-            month_for_label = None
-        else:
-            start_date = fields.Date.to_string(date_utils.start_of(datetime(sel_year, sel_month, 1), 'month'))
-            end_date   = fields.Date.to_string(date_utils.end_of(datetime(sel_year, sel_month, 1), 'month'))
-            month_for_label = str(sel_month)
+        start_date = fields.Date.to_string(datetime(sel_year, 1, 1))
+        end_date   = fields.Date.to_string(datetime(sel_year, 12, 31))
 
         sales_data      = self._get_sales_data(start_date, end_date)
         financial_data  = self._get_financial_data(start_date, end_date)
@@ -114,9 +76,6 @@ class L1Dashboard(models.Model):
         return {
             'filters': {
                 'year': sel_year,
-                'month': sel_month,
-                'month_name': dict(self._fields['month'].selection).get(month_for_label),
-                'quarter': sel_quarter,
             },
             'company': {
                 'name': self.company_id.name,
@@ -225,8 +184,6 @@ class L1Dashboard(models.Model):
         export_analytic_account_ids = export_projects.mapped('analytic_account_id').ids
 
         local_sales_amount = export_sales_amount = 0.0
-
-
         
         for sales_order in sales_orders:
             sale_currency = sales_order.currency_id
@@ -1217,3 +1174,4 @@ class L1Dashboard(models.Model):
             'url': f'/web/content/{attachment.id}?download=true',
             'target': 'new',
         }
+

@@ -19,43 +19,51 @@ export class L2Dashboard extends Component {
       isLoading: false,
     });
 
-    // ---------- external tooltip (outside chart) ----------
+    // Category-based palette (Totals/Local/Export)
+    this.palette = {
+      total:  "#0077b6", // Totals across all metrics
+      local:  "#00b894", // Local across all metrics
+      export: "#e17055", // Export across all metrics
+      inflow:  "#1e90ff", // cashflow series
+      outflow: "#ff4d4f",
+    };
+
+    // ---------- external tooltip host ----------
     this._extTip = null;
     this._ensureTooltipHost();
 
-    useEffect(() => {
-      const dashboardData = this.props.record?.data?.dashboard_data || "{}";
-      let parsed;
-      try {
-        parsed = JSON.parse(dashboardData);
-      } catch (e) {
-        console.warn("Invalid dashboard JSON", e);
-        this.state.error = true;
-        this.state.errorMessage = _t("Dashboard data is invalid.");
-        return;
-      }
-
-      this.state.main_data = parsed;
-
-      loadJS("https://cdn.jsdelivr.net/npm/apexcharts")
-        .then(() => {
-          this._initDashboard();
-          try {
-            this._renderCharts();
-          } catch (err) {
-            console.error("Chart render failed:", err);
-            this.state.error = true;
-            this.state.errorMessage = _t("Failed to render charts.");
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to load ApexCharts", err);
+    useEffect(
+      () => {
+        const dashboardData = this.props.record?.data?.dashboard_data || "{}";
+        let parsed;
+        try {
+          parsed = JSON.parse(dashboardData);
+        } catch (e) {
           this.state.error = true;
-          this.state.errorMessage = _t("Failed to load chart library.");
-        });
-    }, () => [this.props.record?.data?.dashboard_data]);
+          this.state.errorMessage = _t("Dashboard data is invalid.");
+          return;
+        }
+        this.state.main_data = parsed;
 
-    // refs
+        loadJS("https://cdn.jsdelivr.net/npm/apexcharts")
+          .then(() => {
+            this._initDashboard();
+            try {
+              this._renderCharts();
+            } catch {
+              this.state.error = true;
+              this.state.errorMessage = _t("Failed to render charts.");
+            }
+          })
+          .catch(() => {
+            this.state.error = true;
+            this.state.errorMessage = _t("Failed to load chart library.");
+          });
+      },
+      () => [this.props.record?.data?.dashboard_data]
+    );
+
+    // Refs
     this.totalSalesChart = useRef("totalSalesChart");
     this.localSalesChart = useRef("localSalesChart");
     this.exportSalesChart = useRef("exportSalesChart");
@@ -166,7 +174,6 @@ export class L2Dashboard extends Component {
     const { sales, revenue, expenses, cash_flow } = this.state.data;
 
     const fmt = (v) => this.formatNumber(v);
-
     const pickNums = (a) => (Array.isArray(a) ? a.map((x) => +x || 0) : []);
     const maxOf = (arrs) => {
       const flat = arrs.flatMap(pickNums);
@@ -202,13 +209,11 @@ export class L2Dashboard extends Component {
       SIG
     );
 
-    // add a small headroom so labels above bars are not clipped
     const padMax = (m) => Math.ceil(m * 1.05);
-
-    // ---------- option builders ----------
     const clampLen = (...arrs) => Math.min(...arrs.map(a => Array.isArray(a) ? a.length : 0));
 
-    const totalWithBreakdownOpts = (title, totalData, localData, exportData, color, yMaxRaw) => {
+    // Total chart with Local/Export breakdown in tooltip
+    const totalWithBreakdownOpts = (title, totalData, localData, exportData, color, yMaxRaw, localColor, exportColor) => {
       const yMax = padMax(yMaxRaw);
 
       const months = Array.isArray(totalData?.months) ? totalData.months : [];
@@ -229,111 +234,13 @@ export class L2Dashboard extends Component {
           animations: { enabled: true, easing: "easeinout", speed: 800 },
           events: { mouseLeave: () => this._hideExtTip() },
         },
+        colors: [color], // TOTAL color
         plotOptions: {
           bar: {
             borderRadius: 6,
             columnWidth: "60%",
-            distributed: true,
-            dataLabels: { position: "top" }, // outside, on top
-          },
-        },
-        dataLabels: {
-          enabled: true,
-          formatter: (val) => this.formatMillionsShort(val),
-          offsetY: -14, // lift above the bar
-          style: { fontSize: "11px", fontWeight: 700, colors: ["#111"] },
-        },
-        stroke: { width: 1, colors: ["#fff"] },
-        grid: { borderColor: "#e0e0e0", strokeDashArray: 4 },
-        xaxis: {
-          categories: cats,
-          labels: { rotate: -45, style: { fontSize: "11px", fontWeight: 500, colors: "#333" } },
-          axisTicks: { show: false },
-          axisBorder: { color: "#ccc" },
-        },
-        yaxis: {
-          min: 0,
-          max: yMax,
-          tickAmount: 5,
-          forceNiceScale: false,
-          title: { text: `Amount`, style: { fontSize: "12px", color: "#666" } },
-          labels: { formatter: (val) => this.formatNumber(val), style: { fontSize: "11px", color: "#666" } },
-        },
-        fill: {
-          type: "gradient",
-          gradient: {
-            shade: "light",
-            type: "vertical",
-            shadeIntensity: 0.3,
-            gradientToColors: [color],
-            inverseColors: false,
-            opacityFrom: 0.6,
-            opacityTo: 1,
-            stops: [0, 100],
-          },
-        },
-        tooltip: {
-          shared: false,
-          intersect: true,
-          custom: ({ dataPointIndex, w }) => {
-            const label = cats[dataPointIndex] ?? "";
-            const t = totalArr[dataPointIndex] ?? 0;
-            const l = localArr[dataPointIndex] ?? 0;
-            const e = exportArr[dataPointIndex] ?? 0;
-            const x = w?.globals?.clientX ?? 0;
-            const y = w?.globals?.clientY ?? 0;
-
-            const html = `
-              <div class="l2-head">${label}</div>
-              <div class="l2-row"><span><span class="l2-dot" style="background:${color}"></span>Total</span><b>${fmt(t)}</b></div>
-              <div class="l2-row"><span><span class="l2-dot" style="background:#3a86ff"></span>Local</span><b>${fmt(l)}</b></div>
-              <div class="l2-row"><span><span class="l2-dot" style="background:#38b000"></span>Export</span><b>${fmt(e)}</b></div>
-            `;
-            this._showExtTip(html, x, y);
-            return '<div></div>';
-          },
-        },
-        legend: { show: false },
-      };
-    };
-
-    const singleBarOpts = (title, data, color, yMaxRaw) => {
-      const yMax = padMax(yMaxRaw);
-
-      const cats = data?.months || [];
-      const vals = (data?.amounts || []).map(v => Number(v) || 0);
-      const breakdown = Array.isArray(data?.breakdown) ? data.breakdown : null;
-
-      return {
-        series: [{ name: title, data: vals }],
-        chart: {
-          type: "bar",
-          height: 280,
-          toolbar: { show: false },
-          fontFamily: "Inter, Roboto, sans-serif",
-          animations: { enabled: true, easing: "easeinout", speed: 800 },
-          events: { 
-            mouseLeave: () => this._hideExtTip(),
-            click: function () {
-              const domain = JSON.stringify([
-                  ["year", "=", "2024"],
-                  ["tag_type", "=", "local"]
-              ]);
-
-              // Encode qilib URLga qo‘shish
-              window.location.href = "/web#action=my_dashboard.action_l4_dashboard"
-                  + "&model=l4.dashboard"
-                  + "&view_type=list"
-                  + "&domain=" + encodeURIComponent(domain);
-            }
-          },
-        },
-        plotOptions: {
-          bar: {
-            borderRadius: 6,
-            columnWidth: "60%",
-            distributed: true,
-            dataLabels: { position: "top" }, // outside, on top
+            distributed: false,
+            dataLabels: { position: "top" },
           },
         },
         dataLabels: {
@@ -355,22 +262,100 @@ export class L2Dashboard extends Component {
           max: yMax,
           tickAmount: 5,
           forceNiceScale: false,
-          title: { text: `Amount`, style: { fontSize: "12px", color: "#666" } },
-          labels: { formatter: (val) => this.formatNumber(val), style: { fontSize: "11px", color: "#666" } },
+          // title: { text: `Amount`, style: { fontSize: "12px", color: "#666" } },
+          // labels: { formatter: (val) => this.formatNumber(val), style: { fontSize: "11px", color: "#666" } },
+          labels: { show: false },
+          title: { text: undefined },
         },
-        fill: {
-          type: "gradient",
-          gradient: {
-            shade: "light",
-            type: "vertical",
-            shadeIntensity: 0.3,
-            gradientToColors: [color],
-            inverseColors: false,
-            opacityFrom: 0.6,
-            opacityTo: 1,
-            stops: [0, 100],
+        fill: { type: "solid", opacity: 0.9 },
+        tooltip: {
+          shared: false,
+          intersect: true,
+          custom: ({ dataPointIndex, w }) => {
+            const label = cats[dataPointIndex] ?? "";
+            const t = totalArr[dataPointIndex] ?? 0;
+            const l = localArr[dataPointIndex] ?? 0;
+            const e = exportArr[dataPointIndex] ?? 0;
+            const x = w?.globals?.clientX ?? 0;
+            const y = w?.globals?.clientY ?? 0;
+
+            const html = `
+              <div class="l2-head">${label}</div>
+              <div class="l2-row"><span><span class="l2-dot" style="background:${color}"></span>Total</span><b>${fmt(t)}</b></div>
+              <div class="l2-row"><span><span class="l2-dot" style="background:${localColor}"></span>Local</span><b>${fmt(l)}</b></div>
+              <div class="l2-row"><span><span class="l2-dot" style="background:${exportColor}"></span>Export</span><b>${fmt(e)}</b></div>
+            `;
+            this._showExtTip(html, x, y);
+            return '<div></div>';
           },
         },
+        legend: { show: false },
+      };
+    };
+
+    // Single chart (Local or Export)
+    const singleBarOpts = (title, data, color, yMaxRaw) => {
+      const yMax = padMax(yMaxRaw);
+      const cats = data?.months || [];
+      const vals = (data?.amounts || []).map(v => Number(v) || 0);
+      const breakdown = Array.isArray(data?.breakdown) ? data.breakdown : null;
+
+      return {
+        series: [{ name: title, data: vals }],
+        chart: {
+          type: "bar",
+          height: 280,
+          toolbar: { show: false },
+          fontFamily: "Inter, Roboto, sans-serif",
+          animations: { enabled: true, easing: "easeinout", speed: 800 },
+          events: { 
+            mouseLeave: () => this._hideExtTip(),
+            click: function () {
+              const domain = JSON.stringify([
+                ["year", "=", "2024"],
+                ["tag_type", "=", "local"],
+              ]);
+              window.location.href = "/web#action=my_dashboard.action_l4_dashboard"
+                + "&model=l4.dashboard"
+                + "&view_type=list"
+                + "&domain=" + encodeURIComponent(domain);
+            },
+          },
+        },
+        colors: [color], // LOCAL or EXPORT color
+        plotOptions: {
+          bar: {
+            borderRadius: 6,
+            columnWidth: "60%",
+            distributed: false,
+            dataLabels: { position: "top" },
+          },
+        },
+        dataLabels: {
+          enabled: true,
+          formatter: (val) => this.formatMillionsShort(val),
+          offsetY: -14,
+          style: { fontSize: "11px", fontWeight: 700, colors: ["#111"] },
+        },
+        stroke: { width: 1, colors: ["#fff"] },
+        grid: { borderColor: "#e0e0e0", strokeDashArray: 4 },
+        xaxis: {
+          categories: cats,
+          labels: { rotate: -45, style: { fontSize: "11px", fontWeight: 500, colors: "#333" } },
+          axisTicks: { show: false },
+          axisBorder: { color: "#ccc" },
+        },
+        yaxis: {
+          min: 0,
+          max: yMax,
+          tickAmount: 5,
+          forceNiceScale: false,
+          // title: { text: `Amount`, style: { fontSize: "12px", color: "#666" } },
+          // labels: { formatter: (val) => this.formatNumber(val), style: { fontSize: "11px", color: "#666" } },
+          labels: { show: false },
+          title: { text: undefined },
+        },
+        fill: { type: "solid", opacity: 0.9 },
         tooltip: {
           shared: false,
           intersect: true,
@@ -401,11 +386,73 @@ export class L2Dashboard extends Component {
       };
     };
 
-    // UPDATED: custom tooltip that shows monthly totals for area chart
+    // Area (cash flow)
+    // const areaOpts = (title, data, yMax) => {
+    //   const months = Array.isArray(data?.months) ? data.months.map((m) => m ?? "-") : [];
+    //   const inflow = Array.isArray(data?.inflow) ? data.inflow.map((v) => Number(v) || 0) : [];
+    //   const outflow = Array.isArray(data?.outflow) ? data.outflow.map((v) => Number(v) || 0) : [];
+    //   const len = Math.min(months.length, inflow.length, outflow.length);
+
+    //   return {
+    //     chart: {
+    //       type: "area",
+    //       height: 300,
+    //       toolbar: { show: true },
+    //       zoom: { enabled: true },
+    //       events: { mouseLeave: () => this._hideExtTip() },
+    //     },
+    //     series: [
+    //       { name: "Inflow", data: inflow.slice(0, len), color: this.palette.inflow },
+    //       { name: "Outflow", data: outflow.slice(0, len), color: this.palette.outflow },
+    //     ],
+    //     stroke: { curve: "smooth", width: 2 },
+    //     fill: { type: "solid", opacity: 0.4 },
+    //     dataLabels: { enabled: false },
+    //     tooltip: {
+    //       shared: true,
+    //       intersect: false,
+    //       custom: ({ dataPointIndex, w }) => {
+    //         const label = months[dataPointIndex] ?? "";
+    //         const infl  = inflow[dataPointIndex] ?? 0;
+    //         const out   = outflow[dataPointIndex] ?? 0;
+    //         const x = w?.globals?.clientX ?? 0;
+    //         const y = w?.globals?.clientY ?? 0;
+
+    //         const html = `
+    //           <div class="l2-head">${label}</div>
+    //           <div class="l2-row"><span><span class="l2-dot" style="background:${this.palette.inflow}"></span>Inflow</span><b>${this.formatNumber(infl)}</b></div>
+    //           <div class="l2-row"><span><span class="l2-dot" style="background:${this.palette.outflow}"></span>Outflow</span><b>${this.formatNumber(out)}</b></div>
+    //         `;
+    //         this._showExtTip(html, x, y);
+    //         return '<div></div>';
+    //       },
+    //     },
+    //     xaxis: {
+    //       categories: months.slice(0, len),
+    //       labels: { rotate: -45, style: { fontSize: "12px", colors: "#333" } },
+    //       axisTicks: { show: false },
+    //       axisBorder: { color: "#ccc" },
+    //     },
+    //     yaxis: {
+    //       min: 0,
+    //       max: yMax,
+    //       tickAmount: 5,
+    //       forceNiceScale: false,
+    //       // labels: { formatter: (val) => this.formatNumber(val), style: { fontSize: "12px", colors: "#333" } },
+    //       // title: { text: `Amount`, style: { fontSize: "12px", color: "#888" } },
+    //       labels: { show: false },
+    //       title: { text: undefined },
+    //     },
+    //     legend: { position: "top", fontSize: "13px" },
+    //     grid: { borderColor: "#e0e0e0", strokeDashArray: 4 },
+    //   };
+    // };
+
+    // Vibrant cashflow area+line with visible inner color
     const areaOpts = (title, data, yMax) => {
-      const months = Array.isArray(data?.months) ? data.months.map((m) => m ?? "-") : [];
-      const inflow = Array.isArray(data?.inflow) ? data.inflow.map((v) => Number(v) || 0) : [];
-      const outflow = Array.isArray(data?.outflow) ? data.outflow.map((v) => Number(v) || 0) : [];
+      const months = Array.isArray(data?.months) ? data.months.map(m => m ?? "-") : [];
+      const inflow  = Array.isArray(data?.inflow)  ? data.inflow.map(v => Number(v) || 0)  : [];
+      const outflow = Array.isArray(data?.outflow) ? data.outflow.map(v => Number(v) || 0) : [];
       const len = Math.min(months.length, inflow.length, outflow.length);
 
       return {
@@ -416,34 +463,51 @@ export class L2Dashboard extends Component {
           zoom: { enabled: true },
           events: { mouseLeave: () => this._hideExtTip() },
         },
+        colors: [this.palette.inflow, this.palette.outflow],
         series: [
-          { name: "Inflow", data: inflow.slice(0, len), color: "#1e90ff" },
-          { name: "Outflow", data: outflow.slice(0, len), color: "#ff4d4f" },
+          { name: "Inflow",  data: inflow.slice(0, len) },
+          { name: "Outflow", data: outflow.slice(0, len) },
         ],
-        stroke: { curve: "smooth", width: 2 },
-        fill: { type: "solid", opacity: 0.4 },
+        stroke: {
+          curve: "smooth",
+          width: 3,
+          colors: [this.palette.inflow, this.palette.outflow],
+        },
+        markers: {
+          size: 3,
+          hover: { size: 6 },
+          strokeWidth: 2,
+          strokeColors: "#fff",
+        },
+        fill: {
+          type: "gradient",
+          gradient: {
+            shade: "light",
+            type: "vertical",
+            shadeIntensity: 0.5,
+            gradientToColors: [this.palette.inflow, this.palette.outflow],
+            opacityFrom: 0.75,  // stronger visible color inside
+            opacityTo: 0.35,    // fade a little toward bottom
+            stops: [0, 90, 100],
+          },
+        },
         dataLabels: { enabled: false },
         tooltip: {
           shared: true,
           intersect: false,
-          // Show our external tooltip with Inflow/Outflow/Net/Sum
           custom: ({ dataPointIndex, w }) => {
             const label = months[dataPointIndex] ?? "";
             const infl  = inflow[dataPointIndex] ?? 0;
             const out   = outflow[dataPointIndex] ?? 0;
-            const net   = infl - out;
-            const sum   = infl + out;
-
             const x = w?.globals?.clientX ?? 0;
             const y = w?.globals?.clientY ?? 0;
-
             const html = `
               <div class="l2-head">${label}</div>
-              <div class="l2-row"><span><span class="l2-dot" style="background:#1e90ff"></span>Inflow</span><b>${this.formatNumber(infl)}</b></div>
-              <div class="l2-row"><span><span class="l2-dot" style="background:#ff4d4f"></span>Outflow</span><b>${this.formatNumber(out)}</b></div>
+              <div class="l2-row"><span><span class="l2-dot" style="background:${this.palette.inflow}"></span>Inflow</span><b>${this.formatNumber(infl)}</b></div>
+              <div class="l2-row"><span><span class="l2-dot" style="background:${this.palette.outflow}"></span>Outflow</span><b>${this.formatNumber(out)}</b></div>
             `;
             this._showExtTip(html, x, y);
-            return '<div></div>'; // keep native tooltip hidden; use external
+            return '<div></div>';
           },
         },
         xaxis: {
@@ -457,46 +521,47 @@ export class L2Dashboard extends Component {
           max: yMax,
           tickAmount: 5,
           forceNiceScale: false,
-          labels: { formatter: (val) => this.formatNumber(val), style: { fontSize: "12px", colors: "#333" } },
-          title: { text: `Amount`, style: { fontSize: "12px", color: "#888" } },
+          labels: { show: false },
+          title: { text: undefined },
         },
         legend: { position: "top", fontSize: "13px" },
         grid: { borderColor: "#e0e0e0", strokeDashArray: 4 },
       };
     };
-    // ---------- /helpers ----------
+
+    const p = this.palette;
 
     // SALES
     this._createChart(
       "totalSales",
       this.totalSalesChart.el,
-      totalWithBreakdownOpts("Total Sales", sales?.total, sales?.local_sales, sales?.export_sales, "#4361ee", SALES_MAX)
+      totalWithBreakdownOpts("Total Sales", sales?.total, sales?.local_sales, sales?.export_sales, p.total, SALES_MAX, p.local, p.export)
     );
-    this._createChart("localSales",  this.localSalesChart.el,  singleBarOpts("Local Sales",  sales?.local_sales,  "#3a86ff", SALES_MAX));
-    this._createChart("exportSales", this.exportSalesChart.el, singleBarOpts("Export Sales", sales?.export_sales, "#38b000", SALES_MAX));
+    this._createChart("localSales",  this.localSalesChart.el,  singleBarOpts("Local Sales",  sales?.local_sales,  p.local,  SALES_MAX));
+    this._createChart("exportSales", this.exportSalesChart.el, singleBarOpts("Export Sales", sales?.export_sales, p.export, SALES_MAX));
 
     // REVENUE
     this._createChart(
       "totalRevenue",
       this.totalRevenueChart.el,
-      totalWithBreakdownOpts("Total Revenue", revenue?.total, revenue?.local_revenue, revenue?.export_revenue, "#6a4c93", REVENUE_MAX)
+      totalWithBreakdownOpts("Total Revenue", revenue?.total, revenue?.local_revenue, revenue?.export_revenue, p.total, REVENUE_MAX, p.local, p.export)
     );
-    this._createChart("localRevenue",  this.localRevenueChart.el,  singleBarOpts("Local Revenue",  revenue?.local_revenue,  "#9d4edd", REVENUE_MAX));
-    this._createChart("exportRevenue", this.exportRevenueChart.el, singleBarOpts("Export Revenue", revenue?.export_revenue, "#ff6b6b", REVENUE_MAX));
+    this._createChart("localRevenue",  this.localRevenueChart.el,  singleBarOpts("Local Revenue",  revenue?.local_revenue,  p.local,  REVENUE_MAX));
+    this._createChart("exportRevenue", this.exportRevenueChart.el, singleBarOpts("Export Revenue", revenue?.export_revenue, p.export, REVENUE_MAX));
 
     // EXPENSES
     this._createChart(
       "totalExpenses",
       this.totalExpensesChart.el,
-      totalWithBreakdownOpts("Total Expenses", expenses?.total, expenses?.local_expenses, expenses?.export_expenses, "#ff9f1c", EXPENSES_MAX)
+      totalWithBreakdownOpts("Total Expenses", expenses?.total, expenses?.local_expenses, expenses?.export_expenses, p.total, EXPENSES_MAX, p.local, p.export)
     );
-    this._createChart("localExpenses",  this.localExpensesChart.el,  singleBarOpts("Local Expenses",  expenses?.local_expenses,  "#ffbf69", EXPENSES_MAX));
-    this._createChart("exportExpenses", this.exportExpensesChart.el, singleBarOpts("Export Expenses", expenses?.export_expenses, "#cb997e", EXPENSES_MAX));
+    this._createChart("localExpenses",  this.localExpensesChart.el,  singleBarOpts("Local Expenses",  expenses?.local_expenses,  p.local,  EXPENSES_MAX));
+    this._createChart("exportExpenses", this.exportExpensesChart.el, singleBarOpts("Export Expenses", expenses?.export_expenses, p.export, EXPENSES_MAX));
 
-    // CASH FLOW
-    this._createChart("totalCashFlow",  this.totalCashFlowChart.el,  areaOpts("Total Cash Flow",  cash_flow?.total,             padMax(CASHFLOW_MAX)));
-    this._createChart("localCashFlow",  this.localCashFlowChart.el,  areaOpts("Local Cash Flow",  cash_flow?.local_cash_flow,   padMax(CASHFLOW_MAX)));
-    this._createChart("exportCashFlow", this.exportCashFlowChart.el, areaOpts("Export Cash Flow", cash_flow?.export_cash_flow,  padMax(CASHFLOW_MAX)));
+    // CASH FLOW (area)
+    this._createChart("totalCashFlow",  this.totalCashFlowChart.el,  areaOpts("Total Cash Flow",  cash_flow?.total,            padMax(CASHFLOW_MAX)));
+    this._createChart("localCashFlow",  this.localCashFlowChart.el,  areaOpts("Local Cash Flow",  cash_flow?.local_cash_flow,  padMax(CASHFLOW_MAX)));
+    this._createChart("exportCashFlow", this.exportCashFlowChart.el, areaOpts("Export Cash Flow", cash_flow?.export_cash_flow, padMax(CASHFLOW_MAX)));
   }
 
   _createChart(name, element, options) {
@@ -504,8 +569,7 @@ export class L2Dashboard extends Component {
     try {
       this.charts[name] = new ApexCharts(element, options);
       this.charts[name].render();
-    } catch (error) {
-      console.error(`Failed to create chart ${name}:`, error);
+    } catch {
       this.state.error = true;
       this.state.errorMessage = _t("Failed to create one of the charts.");
     }
@@ -514,7 +578,7 @@ export class L2Dashboard extends Component {
   _destroyCharts() {
     Object.values(this.charts).forEach((chart) => {
       if (chart?.destroy) {
-        try { chart.destroy(); } catch (e) { console.warn("Destroy error:", e); }
+        try { chart.destroy(); } catch {}
       }
     });
     this.charts = {};
@@ -549,10 +613,6 @@ export class L2Dashboard extends Component {
     }).format(n);
   }
 
-  /**
-   * Short “millions” label for bar tops, placed OUTSIDE the bars.
-   * Truncates to one decimal (no rounding up)
-   */
   formatMillionsShort(value) {
     if (value === undefined || value === null) return "";
     const m = value / 1_000_000;
@@ -578,7 +638,7 @@ export class L2Dashboard extends Component {
         hour: "2-digit",
         minute: "2-digit",
       }).format(date);
-    } catch (e) {
+    } catch {
       return dateTimeStr;
     }
   }

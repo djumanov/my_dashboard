@@ -21,6 +21,7 @@
 
       .value {
         text-align: left;
+        white-space: nowrap;
       }
     </style>
 

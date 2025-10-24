@@ -3,7 +3,7 @@
     <!-- Main Menu -->
     <menuitem id="menu_l1_dashboard_root"
               name="DrukSmart Dashboard"
-              action="action_l1_dashboard"
+              action="action_druksmart_dashboard_l1_dashboard"
               sequence="90"
               web_icon="my_dashboard,static/description/icon.svg"/>
 
@@ -35,4 +35,11 @@
               parent="menu_l1_dashboard_root"
               action="action_druksmart_dashboard_report"
               sequence="12"/>
+
+    <!-- Dashboard Dashbaord Menu -->
+    <menuitem id="druksmart_dashboard_l1_dashboard"
+              name="Dashboard"
+              parent="menu_l1_dashboard_root"
+              action="action_l1_dashboard"
+              sequence="13"/>
 </odoo>

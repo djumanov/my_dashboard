@@ -544,6 +544,16 @@ class L3Dashboard(models.Model):
             'target': 'self',
         }
 
+    
+    def action_go_back(self):
+        """Go to L4 Dashboard in the same tab."""
+        return {
+            'type': 'ir.actions.act_url',
+            'url': '/web#cids=1&menu_id=632&action=934&model=l4.dashboard&view_type=form',
+            'target': 'self',
+        }
+    
+    
 class L3DashboardController(http.Controller):
 
     @http.route('/l3_dashboard/data', type='json', auth='user')
@@ -619,3 +629,4 @@ class L3DashboardController(http.Controller):
             
         return payroll_cost
     
+

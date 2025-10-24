@@ -6,6 +6,10 @@ from collections import defaultdict
 from odoo import api, fields, models, _
 from odoo.tools import float_round
 
+import base64
+from io import BytesIO
+from odoo.tools.misc import xlsxwriter
+
 _logger = logging.getLogger(__name__)
 
 
@@ -619,3 +623,186 @@ class L2Dashboard(models.Model):
                 'sum': self._format_amount(sum(inflow_export) - sum(outflow_export)),
             },
         }
+
+    def action_export_excel(self):
+        """Export L2 dashboard as a presentation-ready 4-sheet workbook
+        (Sales / Revenue / Expenses / CashFlow). Each sheet contains 3
+        stacked tables and ONLY numbers (no charts)."""
+        self.ensure_one()
+
+        # ---- Pull computed data once ----
+        data = self._get_dashboard_data()
+        months = data['sales']['total']['months']  # ["Jan","Feb",..., "Dec"]
+
+        # Convenience handles
+        s_total  = data['sales']['total']['amounts']
+        s_local  = data['sales']['local_sales']['amounts']
+        s_export = data['sales']['export_sales']['amounts']
+
+        r_total  = data['revenue']['total']['amounts']
+        r_local  = data['revenue']['local_revenue']['amounts']
+        r_export = data['revenue']['export_revenue']['amounts']
+
+        e_total  = data['expenses']['total']['amounts']
+        e_local  = data['expenses']['local_expenses']['amounts']
+        e_export = data['expenses']['export_expenses']['amounts']
+
+        cf_total_in  = data['cash_flow']['total']['inflow']
+        cf_total_out = data['cash_flow']['total']['outflow']
+        cf_loc_in    = data['cash_flow']['local_cash_flow']['inflow']
+        cf_loc_out   = data['cash_flow']['local_cash_flow']['outflow']
+        cf_exp_in    = data['cash_flow']['export_cash_flow']['inflow']
+        cf_exp_out   = data['cash_flow']['export_cash_flow']['outflow']
+        cf_net_total  = [cf_total_in[i] - cf_total_out[i] for i in range(12)]
+        cf_net_local  = [cf_loc_in[i]   - cf_loc_out[i]   for i in range(12)]
+        cf_net_export = [cf_exp_in[i]   - cf_exp_out[i]   for i in range(12)]
+
+        # ---- Workbook boilerplate ----
+        from io import BytesIO
+        import base64
+        from odoo.tools.misc import xlsxwriter
+
+        output = BytesIO()
+        wb = xlsxwriter.Workbook(output, {'in_memory': True})
+
+        # ---- Formats ----
+        title_fmt = wb.add_format({
+            'bold': True, 'font_size': 16, 'align': 'left', 'valign': 'vcenter'
+        })
+        meta_fmt = wb.add_format({'align': 'right', 'italic': True, 'font_color': '#666666'})
+        section_fmt = wb.add_format({'bold': True, 'bg_color': '#D9E1F2', 'border': 1})
+        hdr_fmt = wb.add_format({'bold': True, 'bg_color': '#F2F2F2', 'border': 1, 'align': 'center'})
+        cell_num = wb.add_format({'border': 1, 'num_format': '#,##0.00'})
+        cell_txt = wb.add_format({'border': 1})
+        total_fmt = wb.add_format({'border': 1, 'num_format': '#,##0.00', 'bold': True, 'bg_color': '#FFF2CC'})
+        zebra = wb.add_format({'border': 1, 'num_format': '#,##0.00', 'bg_color': '#FAFAFA'})
+
+        def setup_sheet(name):
+            ws = wb.add_worksheet(name)
+            # Column widths to avoid "#####"
+            ws.set_column('A:A', 16)    # Month
+            ws.set_column('B:Z', 18)    # Amount columns
+            # Header row (title + meta)
+            ws.merge_range(0, 0, 0, 5, f"{name} – {self.company_id.name}", title_fmt)
+            ws.write(0, 6, f"Year: {self.year}   |   Generated: {fields.Datetime.now().strftime('%Y-%m-%d %H:%M')}", meta_fmt)
+            # Print settings (looks nice if printed)
+            ws.set_landscape()
+            ws.fit_to_pages(1, 0)
+            ws.repeat_rows(0, 0)
+            return ws
+
+        def write_table(ws, top_row, caption, months_list, cols_dict):
+            """
+            Write a section caption and a table underneath.
+            cols_dict = Ordered mapping: {'Label1': [12 floats], 'Label2': [...]}
+            Returns last row index used (0-based).
+            """
+            # Section caption (full-width merge)
+            width = 1 + len(cols_dict)  # month + n columns
+            ws.merge_range(top_row, 0, top_row, width, caption, section_fmt)
+            r = top_row + 1
+
+            # Header
+            ws.write(r, 0, "Month", hdr_fmt)
+            c = 1
+            for lbl in cols_dict.keys():
+                ws.write(r, c, lbl, hdr_fmt); c += 1
+            r += 1
+
+            # Body: months
+            for i, m in enumerate(months_list):
+                ws.write(r, 0, m, cell_txt)
+                c = 1
+                for j, (_, vals) in enumerate(cols_dict.items()):
+                    val = float(vals[i]) if i < len(vals) else 0.0
+                    # zebra banded rows
+                    ws.write(r, c, val, zebra if i % 2 else cell_num)
+                    c += 1
+                r += 1
+
+            # Totals
+            ws.write(r, 0, "Total", hdr_fmt)
+            for idx in range(len(cols_dict)):
+                col = 1 + idx
+                first_data = r - len(months_list)
+                last_data = r - 1
+                cell_from = xlsxwriter.utility.xl_rowcol_to_cell(first_data, col)
+                cell_to = xlsxwriter.utility.xl_rowcol_to_cell(last_data, col)
+                ws.write_formula(r, col, f"=SUM({cell_from}:{cell_to})", total_fmt)
+            # Freeze panes at header
+            ws.freeze_panes(top_row + 2, 1)
+            # Autofilter the table
+            ws.autofilter(top_row + 1, 0, r, len(cols_dict))
+            return r  # last row with totals
+
+        # ---- Sheet 1: Sales Overview (3 tables) ----
+        ws = setup_sheet('Sales Overview')
+        r = 2
+        r = write_table(ws, r, "Total Sales (Monthly)", months, {"Total Sales": s_total})
+        r = write_table(ws, r + 2, "Local Sales (Monthly)", months, {"Local Sales": s_local})
+        r = write_table(ws, r + 2, "Export Sales (Monthly)", months, {"Export Sales": s_export})
+
+        # ---- Sheet 2: Revenue Overview (3 tables) ----
+        ws = setup_sheet('Revenue Overview')
+        r = 2
+        r = write_table(ws, r, "Total Revenue (Monthly)", months, {"Total Revenue": r_total})
+        r = write_table(ws, r + 2, "Local Revenue (Monthly)", months, {"Local Revenue": r_local})
+        r = write_table(ws, r + 2, "Export Revenue (Monthly)", months, {"Export Revenue": r_export})
+
+        # ---- Sheet 3: Expenses Overview (3 tables) ----
+        ws = setup_sheet('Expenses Overview')
+        r = 2
+        r = write_table(ws, r, "Total Expenses (Monthly)", months, {"Total Expenses": e_total})
+        r = write_table(ws, r + 2, "Local Expenses (Monthly)", months, {"Local Expenses": e_local})
+        r = write_table(ws, r + 2, "Export Expenses (Monthly)", months, {"Export Expenses": e_export})
+
+        # ---- Sheet 4: CashFlow Overview (3 tables: Total / Local / Export) ----
+        ws = setup_sheet('CashFlow Overview')
+        r = 2
+        r = write_table(ws, r, "Cash Flow – Total (Monthly)", months, {
+            "Inflow (Total)":  cf_total_in,
+            "Outflow (Total)": cf_total_out,
+            "Net (Total)":     cf_net_total,
+        })
+        r = write_table(ws, r + 2, "Cash Flow – Local (Monthly)", months, {
+            "Inflow (Local)":  cf_loc_in,
+            "Outflow (Local)": cf_loc_out,
+            "Net (Local)":     cf_net_local,
+        })
+        r = write_table(ws, r + 2, "Cash Flow – Export (Monthly)", months, {
+            "Inflow (Export)":  cf_exp_in,
+            "Outflow (Export)": cf_exp_out,
+            "Net (Export)":     cf_net_export,
+        })
+
+        # ---- Save to attachment ----
+        wb.close()
+        output.seek(0)
+
+        filename = f"L2_Financial_{self.year}.xlsx"
+        attachment = self.env['ir.attachment'].create({
+            'name': filename,
+            'datas': base64.b64encode(output.read()),
+            'res_model': self._name,
+            'res_id': self.id,
+            'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        })
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/web/content/{attachment.id}?download=true',
+            'target': 'new',
+        }
+
+    def action_back_to_l1(self):
+        """Go back to L1 dashboard."""
+        self.ensure_one()
+        # Prefer XML-ID if available, else fall back to the URL you gave.
+        try:
+            action = self.env.ref('my_dashboard.action_l1_dashboard').read()[0]
+            return action
+        except Exception:
+            return {
+                'type': 'ir.actions.act_url',
+                'url': '/web#menu_id=650&cids=1&action=946&model=l1.dashboard&view_type=form',
+                'target': 'self',
+            }

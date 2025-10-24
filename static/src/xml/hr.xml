@@ -1,0 +1,30 @@
+<templates>
+    <!-- HR Dashboard Page -->
+    <t t-name="custom.hr_dashboard" owl="1">
+        <div class="dashboard-wrapper">
+            <!-- HR Graph Section -->
+            <div class="mt-4 mb-4">
+                <div class="dashboard-hr">
+                    <div class="hr-card">
+                        <p>
+                            <span class="graph_text" style="background: #7a7aff;">Total Employee By Department</span>
+                        </p>
+                        <div class="hr-graph" id="department"></div>
+                    </div>
+                    <div class="hr-card">
+                        <p>
+                            <span class="graph_text" style="background: #7a7aff;">Total Employee By Gender</span>
+                        </p>
+                        <div class="hr-graph" id="gender"></div>
+                    </div>
+                    <div class="hr-card">
+                        <p>
+                            <span class="graph_text" style="background: #7a7aff;">Employee Count By Category</span>
+                        </p>
+                        <div class="hr-graph" id="category"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>
