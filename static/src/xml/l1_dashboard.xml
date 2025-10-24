@@ -39,20 +39,20 @@
                                                 <tr>
                                                     <td class="text-muted ps-0">Sales Target</td>
                                                     <td class="text-end fw-semibold pe-0">
-                                                        <t t-esc="state.main_data.sales?.target || 0" />
+                                                        <t t-esc="state.main_data.overview?.sales_target" />
                                                     </td>
                                                 </tr>
                                                 <tr>
                                                     <td class="text-muted ps-0">Total Achieved</td>
                                                     <td class="text-end fw-semibold pe-0">
-                                                        <t t-esc="state.main_data.sales?.amount || 0" />
+                                                        <t t-esc="state.main_data.overview?.total_achieved" />
                                                     </td>
                                                 </tr>
                                                 <tr>
                                                     <td class="text-muted ps-0">SALES ORDER</td>
                                                     <td class="text-end pe-0">
                                                         <span class="text-end fw-semibold pe-0">
-                                                            <t t-esc="state.main_data.sales?.order_count || 0" />
+                                                            <t t-esc="state.main_data.overview?.sales_order" />
                                                         </span>
                                                     </td>
                                                 </tr>
@@ -66,6 +66,8 @@
                             <div class="col-12 col-md-6 col-xl">
                                 <div class="card h-100 shadow-sm border-0">
                                     <div class="card-body text-center d-flex flex-column justify-content-center">
+                                        
+                                        <!-- Title -->
                                         <div class="d-flex align-items-center justify-content-center mb-3">
                                             <div class="rounded-circle bg-success bg-opacity-10 p-2 me-2">
                                                 <i class="fa fa-bullseye text-success" style="font-size: 20px;"/>
@@ -76,34 +78,55 @@
                                         <!-- Circular Progress -->
                                         <div class="position-relative d-inline-block mx-auto my-3" style="width: 140px; height: 140px;">
                                             <svg width="140" height="140" style="transform: rotate(-90deg);">
-                                                <circle cx="70" cy="70" r="60" fill="none" stroke="#e9ecef" stroke-width="12"/>
-                                                <circle cx="70" cy="70" r="60" fill="none" stroke="#28a745" stroke-width="12" 
-                                                        stroke-dasharray="377" stroke-dashoffset="90.48" 
-                                                        stroke-linecap="round"
-                                                        style="transition: stroke-dashoffset 0.5s ease;"/>
+                                                <!-- Background Circle -->
+                                                <circle 
+                                                    cx="70" cy="70" r="60"
+                                                    fill="none"
+                                                    stroke="#e9ecef"
+                                                    stroke-width="12"
+                                                />
+                                                <!-- Dynamic Progress Circle -->
+                                                <circle 
+                                                    cx="70" cy="70" r="60"
+                                                    fill="none"
+                                                    t-att-stroke="(state.main_data.overview?.ratio or 0) >= 80 and '#28a745' or (state.main_data.overview?.ratio or 0) >= 50 and '#ffc107' or '#dc3545'"
+                                                    stroke-width="12"
+                                                    stroke-dasharray="377"
+                                                    t-att-stroke-dashoffset="state.main_data.overview?.ratio || 0"
+                                                    stroke-linecap="round"
+                                                    style="transition: stroke-dashoffset 0.6s ease;"
+                                                />
                                             </svg>
+
+                                            <!-- Center Text -->
                                             <div class="position-absolute top-50 start-50 translate-middle text-center">
-                                                <h2 class="mb-0 fw-bold text-success" style="font-size: 36px;">76%</h2>
+                                                <h2 class="mb-0 fw-bold text-success" style="font-size: 36px;">
+                                                    <t t-esc="(state.main_data.overview?.ratio or 0)"/>%
+                                                </h2>
                                                 <small class="text-muted" style="font-size: 11px;">Achieved</small>
                                             </div>
                                         </div>
-                                        
+
+                                        <!-- Target vs Achieved -->
                                         <div class="row g-2 mt-2">
                                             <div class="col-6">
                                                 <div class="p-2 bg-light rounded">
                                                     <small class="text-muted d-block" style="font-size: 11px;">Target</small>
-                                                    <strong class="text-dark">34,123</strong>
+                                                    <strong class="text-dark">
+                                                        <t t-esc="state.main_data.overview?.target or 0"/>
+                                                    </strong>
                                                 </div>
                                             </div>
                                             <div class="col-6">
                                                 <div class="p-2 bg-success bg-opacity-10 rounded">
                                                     <small class="text-muted d-block" style="font-size: 11px;">Achieved</small>
-                                                    <strong class="text-success">
-                                                        <t t-esc="state.main_data.sales?.target_achievement || 0" />
+                                                    <strong class="text-dark">
+                                                        <t t-esc="state.main_data.overview?.achieved or 0"/>
                                                     </strong>
                                                 </div>
                                             </div>
                                         </div>
+
                                     </div>
                                 </div>
                             </div>
@@ -123,25 +146,25 @@
                                                 <tr>
                                                     <td class="text-muted ps-0">Revenue</td>
                                                     <td class="text-end fw-semibold pe-0">
-                                                        <t t-esc="state.main_data.revenue?.amount || 0" />
+                                                        <t t-esc="state.main_data.overview?.total_revenue" />
                                                     </td>
                                                 </tr>
                                                 <tr>
                                                     <td class="text-muted ps-0">Cost of Revenue</td>
                                                     <td class="text-end fw-semibold pe-0 text-danger">
-                                                        <t t-esc="state.main_data.revenue?.cost_of_revenue || 0" />
+                                                        <t t-esc="state.main_data.overview?.cost_of_revenue" />
                                                     </td>
                                                 </tr>
                                                 <tr>
                                                     <td class="text-muted ps-0">Gross Profit</td>
                                                     <td class="text-end fw-semibold pe-0 text-success">
-                                                        <t t-esc="state.main_data.revenue?.gross_profit || 0" />
+                                                        <t t-esc="state.main_data.overview?.gross_profit" />
                                                     </td>
                                                 </tr>
                                                 <tr class="border-top">
                                                     <td class="text-muted ps-0 pt-2"><strong>Gross Margin</strong></td>
                                                     <td class="text-end fw-bold pe-0 pt-2 text-success">
-                                                        <t t-esc="state.main_data.revenue?.gross_profit_margin || 0" />
+                                                        <t t-esc="state.main_data.overview?.gross_margin" />
                                                     </td>
                                                 </tr>
                                             </tbody>
@@ -165,19 +188,19 @@
                                                 <tr>
                                                     <td class="text-muted ps-0">Expenses</td>
                                                     <td class="text-end fw-semibold pe-0 text-danger">
-                                                        <t t-esc="state.main_data.revenue?.expenses || 0" />
+                                                        <t t-esc="state.main_data.overview?.total_expenses" />
                                                     </td>
                                                 </tr>
                                                 <tr>
                                                     <td class="text-muted ps-0">Net Profit</td>
                                                     <td class="text-end fw-semibold pe-0 text-success">
-                                                        <t t-esc="state.main_data.revenue?.net_profit || 0" />
+                                                        <t t-esc="state.main_data.overview?.net_profit" />
                                                     </td>
                                                 </tr>
                                                 <tr class="border-top">
                                                     <td class="text-muted ps-0 pt-2"><strong>Net Margin</strong></td>
                                                     <td class="text-end fw-bold pe-0 pt-2 text-success">
-                                                        <t t-esc="state.main_data.revenue?.net_profit_margin || 0" />
+                                                        <t t-esc="state.main_data.overview?.net_margin" />
                                                     </td>
                                                 </tr>
                                             </tbody>
@@ -201,18 +224,20 @@
                                                 <tr>
                                                     <td class="text-muted ps-0">Accounts Receivable</td>
                                                     <td class="text-end fw-semibold pe-0 text-info">
-                                                        <t t-esc="state.main_data.revenue?.accounts_receivable || 0" />
+                                                        <t t-esc="state.main_data.overview?.accounts_receivable" />
                                                     </td>
                                                 </tr>
                                                 <tr>
                                                     <td class="text-muted ps-0">Accounts Payable</td>
                                                     <td class="text-end fw-semibold pe-0 text-warning">
-                                                        <t t-esc="state.main_data.revenue?.accounts_payable || 0" />
+                                                        <t t-esc="state.main_data.overview?.accounts_payable" />
                                                     </td>
                                                 </tr>
                                                 <tr class="border-top">
                                                     <td class="text-muted ps-0 pt-2"><strong>Net Position</strong></td>
-                                                    <td class="text-end fw-bold pe-0 pt-2 text-danger">-$387</td>
+                                                    <td class="text-end fw-bold pe-0 pt-2 text-danger">
+                                                        <t t-esc="state.main_data.overview?.net_postion" />
+                                                    </td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -237,8 +262,9 @@
                         <div class="row g-4">
                             <div class="col-12">
                                 <div class="card shadow-sm border-0">
-                                    <div class="card-body text-center p-5">
-                                        <p class="text-muted">Sales charts and analytics will be displayed here</p>
+                                    <div class="card-body p-5">
+                                        <!-- Canvas for Chart -->
+                                        <canvas id="salesLineChart" height="100"></canvas>
                                     </div>
                                 </div>
                             </div>
