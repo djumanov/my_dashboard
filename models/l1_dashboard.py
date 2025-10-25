@@ -91,6 +91,10 @@ class L1Dashboard(models.Model):
             'sales': {
                 'monthly_sales': sales_data['monthly_sales'],
             },
+            'revenue_expenses': {
+                'monthly_revenue': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],  # Placeholder for monthly revenue data
+                'monthly_expenses': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],  # Placeholder for monthly expenses data
+            },
         }
 
     def _get_yearly_sales_target(self):
