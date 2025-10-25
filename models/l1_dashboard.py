@@ -66,6 +66,7 @@ class L1Dashboard(models.Model):
         
         sales_data = self._compute_sales_dashboard_metrics(start_date, end_date)
         financial_data = self._compute_financial_dashboard_metrics(start_date, end_date)
+        revenue_expenses_data = self._compute_revenue_expenses_dashboard_metrics(start_date, end_date)
 
         return {
             'overview': {
@@ -91,10 +92,7 @@ class L1Dashboard(models.Model):
             'sales': {
                 'monthly_sales': sales_data['monthly_sales'],
             },
-            'revenue_expenses': {
-                'monthly_revenue': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],  # Placeholder for monthly revenue data
-                'monthly_expenses': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],  # Placeholder for monthly expenses data
-            },
+            'revenue_expenses': revenue_expenses_data,
         }
 
     def _get_yearly_sales_target(self):
@@ -442,3 +440,57 @@ class L1Dashboard(models.Model):
         
         # return total_payables + total_liabilities
         return total_payables
+
+    def _compute_revenue_expenses_dashboard_metrics(self, start_date, end_date):
+        """Compute monthly revenue and expenses for the dashboard within a given date range."""
+        
+        # Initialize monthly data with zeros for all 12 months
+        monthly_revenue = [0] * 12
+        monthly_expenses = [0] * 12
+        
+        # Fetch all invoices in the date range for the company
+        domain = [
+            ('company_id', '=', self.company_id.id),
+            ('invoice_date', '>=', start_date),
+            ('invoice_date', '<=', end_date),
+            ('state', '=', 'posted'),  # Only posted invoices
+        ]
+        
+        # Get customer invoices (revenue) - out_invoice and out_refund
+        customer_invoices = self.env['account.move'].search(
+            domain + [('move_type', 'in', ['out_invoice', 'out_refund'])]
+        )
+        
+        # Get vendor bills (expenses) - in_invoice and in_refund
+        vendor_bills = self.env['account.move'].search(
+            domain + [('move_type', 'in', ['in_invoice', 'in_refund'])]
+        )
+        
+        # Process customer invoices (Revenue)
+        for invoice in customer_invoices:
+            month_index = invoice.invoice_date.month - 1  # 0-based index
+            
+            # Handle invoices vs credit notes
+            if invoice.move_type == 'out_invoice':
+                monthly_revenue[month_index] += invoice.amount_total_signed
+            elif invoice.move_type == 'out_refund':
+                monthly_revenue[month_index] -= invoice.amount_total_signed
+        
+        # Process vendor bills (Expenses)
+        for bill in vendor_bills:
+            month_index = bill.invoice_date.month - 1  # 0-based index
+            
+            # Handle bills vs refunds
+            if bill.move_type == 'in_invoice':
+                monthly_expenses[month_index] += abs(bill.amount_total_signed)
+            elif bill.move_type == 'in_refund':
+                monthly_expenses[month_index] -= abs(bill.amount_total_signed)
+        
+        # Round values to 2 decimal places
+        monthly_revenue = [round(amount, 2) for amount in monthly_revenue]
+        monthly_expenses = [round(amount, 2) for amount in monthly_expenses]
+        
+        return {
+            'monthly_revenue': monthly_revenue,
+            'monthly_expenses': monthly_expenses,
+        }
