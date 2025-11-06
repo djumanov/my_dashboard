@@ -1,290 +1,285 @@
 /** @odoo-module **/
-import { registry } from "@web/core/registry";
+import { loadJS } from "@web/core/assets";
 
-var translation = require('web.translation');
-var _t = translation._t;
+import { registry } from "@web/core/registry";
 const { Component, useEffect, useState } = owl;
 
+const CHART_JS_URL = "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
 
 export class Dashboard extends Component {
-    static template = 'custom.hr_dashboard'
+    static template = "custom.hr_dashboard";
+
     setup() {
         super.setup();
+        this.state = useState({ main_data: [] });
 
-        this.state = useState({
-            main_data: [],
-        })
-        useEffect(
-            () => {
-                this.state.main_data = JSON.parse(this.props.record.data.dashboard_data);
-                this.drawPie('gender', this.pieData(this.state.main_data.hr?.gender_data));
-                this.drawBar();
-                this.drawBarHorizontal();
-            },
-            () => [this.props.record.data.dashboard_data]
-        );
+        useEffect(() => {
+            const parsedData = JSON.parse(this.props.record.data.dashboard_data || "{}");
+            this.state.main_data = parsedData;
+            loadJS(CHART_JS_URL).then(() => {
+                this.renderCharts();
+            });
+        }, () => [this.props.record.data.dashboard_data]);
     }
 
-    drawPie(id, data) {
-        Highcharts.chart(id, {
-            chart: {
-                type: 'pie',
-                options3d: {
-                    enabled: true,
-                    alpha: 60,
-                    beta: 0
-                },
-                width: 400,
-                height: 350,
-                events: {
-                    load: function () {
-                        // Grafik yuklangach, barcha data label span’lariga width beramiz
-                        const spans = document.querySelectorAll(`#${id} span[style*="position: absolute"]`);
-                        spans.forEach(span => {
-                            span.style.width = '90px';
-                            span.style.whiteSpace = 'nowrap'; // matn o‘ramasin
-                            span.style.overflow = 'visible';  // kesilmasin
-                            span.style.textOverflow = 'unset'; // ellipsis olib tashlash
-                        });
-                    }
-                }
-            },
-            title: { text: '' },
-            legend: {
-                layout: 'vertical',
-                align: 'right',
-                verticalAlign: 'middle'
-            },
-            tooltip: {
-                useHTML: true,
-                backgroundColor: '#000',
-                borderRadius: 8,
-                borderWidth: 0,
-                style: {
-                    color: '#fff',
-                    fontSize: '16px',
-                    padding: 12
-                },
-                formatter: function () {
-                    const formattedValue = Highcharts.numberFormat(this.y, 0, '.', ',');
-                    return `<b style="color:${this.point.color}; font-size: 16px;">${this.point.name}</b>: 
-                            <span style="font-weight: bold; font-size: 16px;">${formattedValue}</span>`;
-                }
-            },
-            plotOptions: {
-                pie: {
-                    allowPointSelect: false,
-                    cursor: 'pointer',
-                    depth: 35,
-                    showInLegend: true,
-                    size: "90%",
-                    dataLabels: {
-                        enabled: true,
-                        useHTML: true,
-                        distance: -40,
-                        formatter: function () {
-                            let formattedValue = Highcharts.numberFormat(this.y, 0, '.', ',');
-                            let bgColor = this.point.color || '#007bff';
-                            return `<div style="
-                                background-color: ${bgColor}; 
-                                color: #fff; 
-                                padding: 4px 10px; 
-                                border-radius: 8px;
-                                font-weight: 600;
-                                font-size: 14px;
-                                text-align: center;
-                                white-space: nowrap;
-                                display: inline-block;
-                            ">${formattedValue}</div>`;
-                        },
-                        align: 'center'
-                    }
-                }
-            },
-            series: [{
-                type: 'pie',
-                name: 'Count',
-                colors: ['#4e79a7', '#f28e2c'],
-                data: data
-            }]
-        });
-    }
-    
+    renderCharts() {
 
-    drawBar() {
-        const categories = this.state.main_data.hr?.categories.map(item => item.name) || [];
-        const data = this.state.main_data.hr?.categories.map(item => item.count) || [];
-    
-        Highcharts.chart('category', {
-            chart: {
-                type: 'column',
-                options3d: {
-                    enabled: true,
-                    alpha: 15,
-                    beta: 0,
-                }
+        this.renderDepartmentChart();
+        this.renderGenderChart();
+        this.renderCategoryChart();
+    }
+
+    _gradient(ctx, colorStart, colorEnd, vertical = false) {
+        const gradient = ctx.createLinearGradient(0, 0, vertical ? 0 : ctx.canvas.width, vertical ? ctx.canvas.height : 0);
+        gradient.addColorStop(0, colorStart);
+        gradient.addColorStop(1, colorEnd);
+        return gradient;
+    }
+
+    renderDepartmentChart() {
+        const canvas = document.getElementById("department");
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+
+        const data = this.state.main_data.hr?.departments || [];
+        
+        // Sort data by count for better visualization
+        const sortedData = [...data].sort((a, b) => b.count - a.count);
+        const labels = sortedData.map(d => d.name);
+        const values = sortedData.map(d => d.count);
+
+        const gradient = this._gradient(ctx, "#6366f1", "#a855f7");
+
+        new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels,
+                datasets: [{
+                    label: "Employees",
+                    data: values,
+                    borderRadius: 8,
+                    backgroundColor: gradient,
+                    borderSkipped: false,
+                    barPercentage: 0.7,
+                    categoryPercentage: 0.8,
+                }]
             },
-            title: {
-                text: 'Employee Count by Category',
-                style: {
-                    fontSize: '14px',
-                    fontWeight: 'bold',
-                    color: '#fff'
+            options: {
+                indexAxis: "y", // This makes it horizontal
+                maintainAspectRatio: false,
+                responsive: true,
+                animation: { 
+                    duration: 1200, 
+                    easing: "easeOutQuart" 
                 },
-                align: 'center',
-                verticalAlign: 'top',
-                backgroundColor: '#1e88e5',
-                borderRadius: 5,
-                padding: 10
-            },
-            xAxis: {
-                categories: categories,
-                labels: {
-                    style: {
-                        fontSize: '13px',
+                layout: {
+                    padding: {
+                        left: 120, // More space for long labels
+                        right: 20,
+                        top: 10,
+                        bottom: 10
                     }
-                }
-            },
-            yAxis: {
-                title: { text: '' },
-                allowDecimals: false
-            },
-            tooltip: {
-                useHTML: true,
-                backgroundColor: '#000',
-                borderRadius: 8,
-                borderWidth: 0,
-                style: {
-                    color: '#fff',
-                    fontSize: '14px',
-                    padding: 12
                 },
-                formatter: function () {
-                    return `<b style="color:${this.color}; font-size: 14px;">${this.key}</b><br/>
-                            <span style="font-size: 13px;">${this.series.name}:</span> 
-                            <b style="font-size: 14px;">${this.y}</b>`;
-                }
-            },
-            plotOptions: {
-                column: {
-                    depth: 25,
-                    dataLabels: {
-                        enabled: true,
-                        color: '#000',
-                        style: {
-                            fontWeight: 'bold',
-                            fontSize: '13px'
+                plugins: {
+                    legend: { 
+                        display: false 
+                    },
+                    tooltip: {
+                        backgroundColor: "#0f172a",
+                        titleColor: "#fff",
+                        bodyColor: "#cbd5e1",
+                        padding: 12,
+                        borderWidth: 0,
+                        cornerRadius: 8,
+                        displayColors: false,
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                // Show full department name in tooltip
+                                return tooltipItems[0].label;
+                            },
+                            label: function(context) {
+                                return `Employees: ${context.parsed.x}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: { 
+                            color: "#e5e7eb",
+                            drawBorder: false
                         },
-                        verticalAlign: 'top',
-                        inside: false,
-                        formatter: function () {
-                            return this.y;
+                        ticks: { 
+                            color: "#475569", 
+                            font: { 
+                                size: 12,
+                                weight: "500" 
+                            },
+                            stepSize: 1
+                        },
+                        title: {
+                            display: true,
+                            text: 'Number of Employees',
+                            color: '#64748b',
+                            font: {
+                                size: 13,
+                                weight: '600'
+                            }
+                        }
+                    },
+                    y: {
+                        grid: { 
+                            display: false 
+                        },
+                        ticks: { 
+                            color: "#1e293b", 
+                            font: { 
+                                size: 12, 
+                                weight: "500" 
+                            },
+                            // Auto-wrap long labels
+                            callback: function(value, index) {
+                                const label = this.getLabelForValue(index);
+                                const maxLength = 30;
+                                if (label.length > maxLength) {
+                                    const words = label.split(' ');
+                                    let lines = [];
+                                    let currentLine = '';
+                                    
+                                    words.forEach(word => {
+                                        if ((currentLine + word).length <= maxLength) {
+                                            currentLine += (currentLine ? ' ' : '') + word;
+                                        } else {
+                                            if (currentLine) lines.push(currentLine);
+                                            currentLine = word;
+                                        }
+                                    });
+                                    if (currentLine) lines.push(currentLine);
+                                    
+                                    return lines;
+                                }
+                                return label;
+                            },
+                            padding: 8
                         }
                     }
                 }
-            },
-            series: [{
-                name: 'Count',
-                data: data,
-                colorByPoint: true,
-                colors: ['#1e88e5', '#f28e2c']
-            }]
+            }
         });
     }
-    
 
-    drawBarHorizontal() {        
-        const categories = this.state.main_data.hr?.departments.map(item => item.name);
-        const data = this.state.main_data.hr?.departments.map(item => item.count);
-    
-        Highcharts.chart('department', {
-            chart: {
-                type: 'bar',
-                options3d: {
-                    enabled: true,
-                    alpha: 10,
-                    beta: 0,
-                    depth: 50,
-                    viewDistance: 25
-                },
-                backgroundColor: 'transparent', // optional for cleaner look
+    renderGenderChart() {
+        const canvas = document.getElementById("gender");
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+
+        const data = this.state.main_data.hr?.gender_data?.data || [];
+        const labels = data.map(g => g.name);
+        const values = data.map(g => g.value);
+
+        new Chart(ctx, {
+            type: "doughnut",
+            data: {
+                labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: ["#6366f1", "#f472b6", "#10b981"],
+                    borderWidth: 0,
+                    hoverOffset: 12,
+                }]
             },
-            title: {
-                text: '',
-            },
-            xAxis: {
-                categories: categories,
-                title: { text: null },
-                labels: {
-                    style: {
-                        fontSize: '12px',
-                        fontWeight: 'bold'
-                    }
-                }
-            },
-            yAxis: {
-                title: { text: null },
-                allowDecimals: false,
-                labels: {
-                    enabled: true
-                }
-            },
-            tooltip: {
-                useHTML: true,
-                backgroundColor: '#000',
-                borderRadius: 6,
-                style: {
-                    color: '#fff',
-                    fontSize: '14px'
-                },
-                formatter: function () {
-                    return `<b>${this.key}</b>: ${this.y} Employees`;
-                }
-            },
-            plotOptions: {
-                series: {
-                    animation: true
-                },
-                bar: {
-                    depth: 25,
-                    dataLabels: {
-                        enabled: true,
-                        inside: false,
-                        allowOverlap: true,
-                        crop: false,
-                        overflow: 'none',
-                        formatter: function () {
-                            return `${this.y}`;
-                        },
-                        style: {
-                            fontWeight: 'bold',
-                            fontSize: '13px',
-                            color: '#000'
+            options: {
+                cutout: "68%",
+                maintainAspectRatio: false,
+                animation: { duration: 1200, easing: "easeOutCubic" },
+                plugins: {
+                    legend: {
+                        position: "bottom",
+                        labels: {
+                            color: "#334155",
+                            usePointStyle: true,
+                            boxWidth: 10,
+                            padding: 14,
+                            font: { size: 13, weight: "500" },
                         }
+                    },
+                    tooltip: {
+                        backgroundColor: "#0f172a",
+                        titleColor: "#fff",
+                        bodyColor: "#cbd5e1",
+                        cornerRadius: 8,
+                        padding: 10,
                     }
                 }
             },
-            series: [{
-                name: 'Count',
-                data: data,
-                colorByPoint: true,
-                colors: ['#1e88e5']
+            plugins: [{
+                id: "centerText",
+                afterDraw(chart) {
+                    const { ctx, chartArea: { width, height } } = chart;
+                    ctx.save();
+                    const total = values.reduce((a, b) => a + b, 0);
+                    ctx.font = "600 16px 'Inter'";
+                    ctx.fillStyle = "#1e293b";
+                    ctx.textAlign = "center";
+                    ctx.fillText(`${total}`, width / 2, height / 2 + 6);
+                    ctx.restore();
+                }
             }]
         });
     }
-    
-    
-    pieData(source) {
-        if (!source || !source.data || !Array.isArray(source.data)) {
-            console.warn("Invalid gender_data format:", source);
-            return [];
-        }
-        return source.data.map(info => ({
-            name: info?.name || 'Unknown',
-            y: info?.value || 0,
-        }));
-    }
 
+    renderCategoryChart() {
+        const canvas = document.getElementById("category");
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+
+        const data = this.state.main_data.hr?.categories || [];
+        const labels = data.map(c => c.name);
+        const values = data.map(c => c.count);
+
+        const gradient = this._gradient(ctx, "#10b981", "#06b6d4", true);
+
+        new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels,
+                datasets: [{
+                    label: "Employees",
+                    data: values,
+                    borderRadius: 14,
+                    borderSkipped: false,
+                    backgroundColor: gradient,
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                animation: { duration: 1000, easing: "easeOutBounce" },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: "#0f172a",
+                        titleColor: "#fff",
+                        bodyColor: "#cbd5e1",
+                        padding: 10,
+                        borderWidth: 0,
+                        cornerRadius: 8,
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: "#f3f4f6" },
+                        ticks: { color: "#334155", font: { weight: "600" } }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: "#e2e8f0" },
+                        ticks: { color: "#64748b", stepSize: 1 }
+                    }
+                }
+            }
+        });
+    }
 }
 
 registry.category("fields").add("hr_dashboard", Dashboard);

@@ -1,30 +1,137 @@
 <templates>
-    <!-- HR Dashboard Page -->
     <t t-name="custom.hr_dashboard" owl="1">
-        <div class="dashboard-wrapper">
-            <!-- HR Graph Section -->
-            <div class="mt-4 mb-4">
-                <div class="dashboard-hr">
-                    <div class="hr-card">
-                        <p>
-                            <span class="graph_text" style="background: #7a7aff;">Total Employee By Department</span>
-                        </p>
-                        <div class="hr-graph" id="department"></div>
-                    </div>
-                    <div class="hr-card">
-                        <p>
-                            <span class="graph_text" style="background: #7a7aff;">Total Employee By Gender</span>
-                        </p>
-                        <div class="hr-graph" id="gender"></div>
-                    </div>
-                    <div class="hr-card">
-                        <p>
-                            <span class="graph_text" style="background: #7a7aff;">Employee Count By Category</span>
-                        </p>
-                        <div class="hr-graph" id="category"></div>
-                    </div>
+        <!-- Charts Grid -->
+        <div class="o_hr_grid">
+            <!-- Department Chart -->
+            <div class="o_hr_card">
+                <div class="o_hr_card_header">
+                    <span class="o_hr_tag o_tag_dept">Total Employees by Department</span>
+                </div>
+                <div class="o_hr_chart">
+                    <canvas id="department"></canvas>
+                </div>
+            </div>
+
+            <!-- Gender Chart -->
+            <div class="o_hr_card">
+                <div class="o_hr_card_header">
+                    <span class="o_hr_tag o_tag_gender">Total Employees by Gender</span>
+                </div>
+                <div class="o_hr_chart">
+                    <canvas id="gender"></canvas>
+                </div>
+            </div>
+
+            <!-- Category Chart -->
+            <div class="o_hr_card">
+                <div class="o_hr_card_header">
+                    <span class="o_hr_tag o_tag_category">Employee Count by Category</span>
+                </div>
+                <div class="o_hr_chart">
+                    <canvas id="category"></canvas>
                 </div>
             </div>
         </div>
+
+        <!-- 🎨 Scoped CSS -->
+        <style>
+            .o_hr_dashboard {
+                padding: 32px 40px;
+                background: #f9fafb;
+                min-height: 100vh;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+                color: #1e293b;
+            }
+
+            .o_hr_header {
+                margin-bottom: 32px;
+                text-align: center;
+            }
+
+            .o_hr_header h2 {
+                font-size: 26px;
+                font-weight: 700;
+                color: #111827;
+                margin-bottom: 6px;
+            }
+
+            .o_hr_subtitle {
+                color: #6b7280;
+                font-size: 15px;
+            }
+
+            .o_hr_grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+                gap: 28px;
+            }
+
+            .o_hr_card {
+                background: #fff;
+                border-radius: 16px;
+                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+                padding: 24px;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+            }
+
+            .o_hr_card:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+            }
+
+            .o_hr_card_header {
+                margin-bottom: 12px;
+            }
+
+            .o_hr_tag {
+                display: inline-block;
+                padding: 6px 12px;
+                font-size: 13px;
+                font-weight: 600;
+                border-radius: 6px;
+                color: #fff;
+                letter-spacing: 0.2px;
+            }
+
+            .o_tag_dept {
+                background: linear-gradient(90deg, #6366f1, #7c3aed);
+            }
+
+            .o_tag_gender {
+                background: linear-gradient(90deg, #06b6d4, #0ea5e9);
+            }
+
+            .o_tag_category {
+                background: linear-gradient(90deg, #10b981, #059669);
+            }
+
+            .o_hr_chart {
+                width: 100%;
+                height: 300px;
+                border-radius: 12px;
+                background: #f3f4f6;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .o_hr_chart canvas {
+                width: 100% !important;
+                height: 100% !important;
+            }
+
+            /* Responsive tweaks */
+            @media (max-width: 768px) {
+                .o_hr_dashboard {
+                    padding: 20px;
+                }
+
+                .o_hr_chart {
+                    height: 260px;
+                }
+            }
+        </style>
     </t>
 </templates>

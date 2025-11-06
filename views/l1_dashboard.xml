@@ -6,6 +6,20 @@
         <field name="arch" type="xml">
             <form string="L1 Dashboard" class="o_l1_dashboard_form" create="0" edit="0" delete="0">
                 <style>
+                    /* ========================================
+                       RESET AND HIDE ODOO CONTROLS
+                    ======================================== */
+                    .o_l1_dashboard_form .o_form_statusbar,
+                    .o_l1_dashboard_form .o_control_panel,
+                    .o_l1_dashboard_form .o_control_panel_main,
+                    .o_l1_dashboard_form .o_control_panel_breadcrumbs,
+                    .o_l1_dashboard_form .o_control_panel_actions {
+                        display: none !important;
+                        height: 0 !important;
+                        min-height: 0 !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                    }
                     .o_control_panel {
                         border-bottom: 0;
                         padding-top: 0;
@@ -15,127 +29,413 @@
                         visibility: hidden;
                         display: none;
                     }
-
-                    /* Completely remove control panel */
-                    .o_l1_dashboard_form .o_form_statusbar {
-                        display: none !important;
-                    }
                     
-                    .o_l1_dashboard_form .o_control_panel {
-                        display: none !important;
-                        height: 0 !important;
-                        min-height: 0 !important;
+                    .o_l1_dashboard_form .o_form_sheet_bg,
+                    .o_l1_dashboard_form .o_form_sheet,
+                    .o_l1_dashboard_form .o_form_view,
+                    .o_l1_dashboard_form .o_content,
+                    .o_l1_dashboard_form .o_form_nosheet {
                         padding: 0 !important;
                         margin: 0 !important;
-                        border: 0 !important;
-                    }
-                    
-                    /* Remove control panel wrapper */
-                    .o_l1_dashboard_form .o_form_view .o_control_panel_main {
-                        display: none !important;
-                    }
-                    
-                    .o_l1_dashboard_form .o_form_view .o_control_panel_breadcrumbs {
-                        display: none !important;
-                    }
-                    
-                    .o_l1_dashboard_form .o_form_view .o_control_panel_actions {
-                        display: none !important;
-                    }
-                    
-                    /* Full width form without any wrapper padding */
-                    .o_l1_dashboard_form .o_form_sheet_bg {
-                        padding: 0 !important;
-                        background: #f8f9fa !important;
-                        margin: 0 !important;
-                    }
-                    
-                    .o_l1_dashboard_form .o_form_sheet {
                         max-width: 100% !important;
-                        padding: 0 !important;
+                        width: 100% !important;
                         box-shadow: none !important;
-                        margin: 0 !important;
                         border: 0 !important;
                     }
-                    
-                    /* Remove any form view padding */
-                    .o_l1_dashboard_form .o_form_view {
-                        padding: 0 !important;
-                        margin: 0 !important;
+                    .o_field_widget {
+                        margin-bottom: 0 !important;
                     }
                     
+                    .o_l1_dashboard_form .o_form_sheet_bg {
+                        background: #f5f7fa !important;
+                    }
+
+                    /* ========================================
+                       FULL HEIGHT LAYOUT
+                    ======================================== */
+                    .o_l1_dashboard_form,
+                    .o_l1_dashboard_form .o_form_view,
                     .o_l1_dashboard_form .o_content {
-                        padding: 0 !important;
+                        height: 100vh !important;
+                        overflow: hidden !important;
                     }
-                    
-                    /* Custom Dashboard Header */
+
+                    /* ========================================
+                       HEADER - COMPACT AND MODERN
+                    ======================================== */
                     .dashboard_header {
-                        background: white;
-                        padding: 20px 30px;
-                        border-bottom: 1px solid #dee2e6;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        padding: 16px 24px;
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                        height: 64px;
+                        flex-shrink: 0;
                     }
                     
                     .dashboard_header h1 {
                         margin: 0;
-                        font-size: 24px;
-                        font-weight: 600;
-                        color: #2c3e50;
+                        font-size: 20px;
+                        font-weight: 700;
+                        color: white;
+                        letter-spacing: -0.3px;
+                    }
+                    
+                    .dashboard_header h1 i {
+                        margin-right: 10px;
+                        opacity: 0.95;
                     }
                     
                     .dashboard_filters {
                         display: flex;
                         align-items: center;
-                        gap: 15px;
+                        gap: 12px;
                     }
                     
                     .dashboard_filters .filter_label {
                         margin: 0;
-                        font-weight: 500;
-                        color: #6c757d;
-                        white-space: nowrap;
-                        font-size: 14px;
+                        font-weight: 600;
+                        color: rgba(255,255,255,0.95);
+                        font-size: 13px;
                     }
                     
                     .dashboard_filters .o_field_widget {
-                        min-width: 150px;
+                        min-width: 140px;
                     }
                     
                     .dashboard_filters select {
-                        height: 38px !important;
-                        border: 1px solid #ced4da !important;
-                        border-radius: 4px !important;
+                        height: 36px !important;
+                        border: 2px solid rgba(255,255,255,0.3) !important;
+                        border-radius: 6px !important;
                         padding: 6px 12px !important;
-                        font-size: 14px !important;
+                        font-size: 13px !important;
+                        background: rgba(255,255,255,0.15) !important;
+                        color: white !important;
+                        font-weight: 500 !important;
+                        transition: all 0.3s ease !important;
                     }
                     
-                    /* Dashboard Content Area */
-                    .dashboard_content {
-                        padding: 0;
-                        min-height: calc(100vh - 120px);
-                        background: #f8f9fa;
+                    .dashboard_filters select:hover {
+                        background: rgba(255,255,255,0.25) !important;
+                        border-color: rgba(255,255,255,0.5) !important;
                     }
                     
-                    .o_l1_dashboard_form .o_field_widget {
-                        width: 100% !important;
+                    .dashboard_filters select option {
+                        background: #2d3748 !important;
+                        color: white !important;
+                    }
+                    
+                    .download-btn {
+                        height: 36px !important;
+                        padding: 6px 20px !important;
+                        font-size: 13px !important;
+                        font-weight: 600 !important;
+                        border-radius: 6px !important;
+                        background: white !important;
+                        color: #667eea !important;
+                        border: 2px solid white !important;
+                        transition: all 0.3s ease !important;
+                    }
+                    
+                    .download-btn:hover {
+                        background: rgba(255,255,255,0.9) !important;
+                        transform: translateY(-1px);
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
                     }
 
-                    .o_form_nosheet {
-                        padding-top: 0 !important;
+                    /* ========================================
+                       DASHBOARD CONTENT - PERFECT FIT
+                    ======================================== */
+                    .dashboard_content {
+                        height: calc(100vh - 64px);
+                        overflow: hidden !important;
+                        background: #f5f7fa;
+                        padding: 0 !important;
+                    }
+                    
+                    /* Force field widget to full width */
+                    .o_l1_dashboard_form .o_field_widget {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                    }
+                    
+                    .o_l1_dashboard_form .o_field_l1_dashboard {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        display: block !important;
+                    }
+                    
+                    .o_l1_dashboard_form .o_readonly_modifier {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                    }
+                    
+                    .l1_dashboard_wrapper {
+                        height: 100%;
+                        width: 100%;
+                        display: flex;
+                        flex-direction: column;
+                        padding: 16px;
+                        gap: 16px;
+                        overflow: hidden;
+                    }
+
+                    /* ========================================
+                       KPI CARDS SECTION - 35% HEIGHT
+                    ======================================== */
+                    .kpi_section {
+                        flex: 0 0 35%;
+                        display: flex;
+                        gap: 12px;
+                        min-height: 0;
+                    }
+                    
+                    .kpi_card {
+                        flex: 1;
+                        background: white;
+                        border-radius: 12px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+                        padding: 16px;
+                        display: flex;
+                        flex-direction: column;
+                        transition: all 0.3s ease;
+                        border: 1px solid #e2e8f0;
+                        min-width: 0;
+                    }
+                    
+                    .kpi_card:hover {
+                        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                        transform: translateY(-2px);
+                    }
+                    
+                    .kpi_header {
+                        display: flex;
+                        align-items: center;
+                        margin-bottom: 12px;
+                        gap: 10px;
+                    }
+                    
+                    .kpi_icon {
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 10px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        flex-shrink: 0;
+                    }
+                    
+                    .kpi_icon i {
+                        font-size: 18px;
+                    }
+                    
+                    .kpi_title {
+                        font-size: 13px;
+                        font-weight: 700;
+                        color: #2d3748;
+                        margin: 0;
+                        letter-spacing: -0.2px;
+                    }
+                    
+                    .kpi_content {
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                    }
+                    
+                    .kpi_content table {
+                        width: 100%;
+                        margin: 0;
+                    }
+                    
+                    .kpi_content td {
+                        padding: 4px 0;
+                        font-size: 12px;
+                        line-height: 1.4;
+                    }
+                    
+                    .kpi_content td:first-child {
+                        color: #64748b;
+                        font-weight: 500;
+                    }
+                    
+                    .kpi_content td:last-child {
+                        text-align: right;
+                        font-weight: 700;
+                        color: #1e293b;
+                    }
+                    
+                    .kpi_content .border-top td {
+                        padding-top: 8px;
+                        border-top: 1px solid #e2e8f0 !important;
+                    }
+                    
+                    /* Target Achievement Card - Special Layout */
+                    .target_achievement_card {
+                        display: flex;
+                        flex-direction: column;
+                    }
+                    
+                    .target_chart_wrapper {
+                        flex: 1;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 8px 0;
+                    }
+                    
+                    .ta-bar-wrap {
+                        width: 100px;
+                        height: 140px;
+                    }
+                    
+                    .ta-bar-wrap canvas {
+                        width: 100% !important;
+                        height: 100% !important;
+                    }
+                    
+                    .target_legend {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 16px;
+                        padding-top: 8px;
+                    }
+                    
+                    .legend_item {
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                    }
+                    
+                    .ta-dot {
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 2px;
+                    }
+                    
+                    .ta-dot--green { background: #22c55e; }
+                    .ta-dot--red { background: #ef4444; }
+                    
+                    .legend_item small {
+                        font-size: 11px;
+                        color: #64748b;
+                        font-weight: 600;
+                    }
+
+                    /* ========================================
+                       CHARTS SECTION - 65% HEIGHT
+                    ======================================== */
+                    .charts_section {
+                        flex: 0 0 65%;
+                        display: flex;
+                        gap: 12px;
+                        min-height: 0;
+                    }
+                    
+                    .chart_card {
+                        flex: 1;
+                        background: white;
+                        border-radius: 12px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+                        padding: 16px;
+                        display: flex;
+                        flex-direction: column;
+                        border: 1px solid #e2e8f0;
+                        min-width: 0;
+                        transition: all 0.3s ease;
+                    }
+                    
+                    .chart_card:hover {
+                        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                    }
+                    
+                    .chart-container {
+                        flex: 1;
+                        min-height: 0;
+                        position: relative;
+                    }
+                    
+                    .chart-container canvas {
+                        max-height: 100% !important;
+                        height: 350px !important;
+                    }
+
+                    /* ========================================
+                       COLOR SCHEMES
+                    ======================================== */
+                    .bg-primary-light { background: #dbeafe; }
+                    .text-primary { color: #3b82f6; }
+                    
+                    .bg-success-light { background: #dcfce7; }
+                    .text-success { color: #22c55e; }
+                    
+                    .bg-warning-light { background: #fef3c7; }
+                    .text-warning { color: #f59e0b; }
+                    
+                    .bg-info-light { background: #e0f2fe; }
+                    .text-info { color: #0ea5e9; }
+                    
+                    .text-danger { color: #ef4444; }
+
+                    /* ========================================
+                       RESPONSIVE ADJUSTMENTS
+                    ======================================== */
+                    @media (max-width: 1400px) {
+                        .kpi_section {
+                            flex-wrap: wrap;
+                        }
+                        
+                        .kpi_card {
+                            flex: 1 1 calc(33.333% - 12px);
+                            min-width: 180px;
+                        }
+                    }
+                    
+                    @media (max-width: 768px) {
+                        .dashboard_header {
+                            flex-direction: column;
+                            height: auto;
+                            padding: 12px;
+                            gap: 12px;
+                        }
+                        
+                        .dashboard_content {
+                            height: calc(100vh - 100px);
+                        }
+                        
+                        .l1_dashboard_wrapper {
+                            padding: 12px;
+                            gap: 12px;
+                        }
+                        
+                        .kpi_section,
+                        .charts_section {
+                            flex-direction: column;
+                        }
+                        
+                        .kpi_section {
+                            flex: 0 0 auto;
+                        }
+                        
+                        .charts_section {
+                            flex: 1;
+                        }
                     }
                 </style>
                 
                 <div class="dashboard_header">
                     <h1>
-                        <i class="fa fa-dashboard me-2" style="color: #875a7b;"/>
-                        L1 Dashboard
+                        <i class="fa fa-dashboard"/>
+                        Company Financial Overview
                     </h1>
+                
                     <div class="dashboard_filters">
                         <span class="filter_label">Year:</span>
                         <field name="year" widget="selection" options="{'no_open': True}"/>
+                        <button name="action_export_excel" type="object" string="Download" class="btn download-btn"/>
                     </div>
                 </div>
                 
@@ -143,14 +443,12 @@
                     <field name="dashboard_data" readonly="1" nolabel="1" widget="l1_dashboard"/>
                 </div>
                 
-                <!-- Hidden fields -->
                 <field name="company_id" groups="base.group_multi_company" invisible="1"/>
                 <field name="currency_id" invisible="1"/>
             </form>
         </field>
     </record>
 
-    <!-- Dashboard Action -->
     <record id="action_druksmart_dashboard_l1_dashboard" model="ir.actions.act_window">
         <field name="name">L1 Dashboard</field>
         <field name="res_model">l1.dashboard_demo</field>

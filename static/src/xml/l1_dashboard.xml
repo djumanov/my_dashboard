@@ -1,326 +1,167 @@
 <templates>
-    <!-- L1 Dashboard Template -->
     <t t-name="custom.l1_dashboard_demo" owl="1">
         <div class="l1_dashboard_wrapper">
-            <t t-if="state.isLoading">
-                <div class="d-flex justify-content-center align-items-center" style="min-height: 400px;">
-                    <div class="text-center">
-                        <i class="fa fa-spinner fa-spin fa-3x text-primary mb-3"/>
-                        <p class="text-muted">Loading dashboard data...</p>
+            <!-- KPI Cards Section (35% height) -->
+            <div class="kpi_section">
+                <!-- Sales Card -->
+                <div class="kpi_card">
+                    <div class="kpi_header">
+                        <div class="kpi_icon bg-primary-light">
+                            <i class="fa fa-line-chart text-primary"/>
+                        </div>
+                        <h6 class="kpi_title">Sales</h6>
                     </div>
-                </div>
-            </t>
-            
-            <t t-else="">
-                <!-- Section 1: Company Financial Overview -->
-                <div class="dashboard_section">
-                    <div class="container-fluid" style="padding: 30px 30px 0 30px;">
-                        <!-- Section Title -->
-                        <div class="row mb-4">
-                            <div class="col-12 text-center">
-                                <h2 class="fw-bold text-dark mb-0">Company Financial Overview</h2>
-                            </div>
-                        </div>
-
-                        <!-- Cards Row -->
-                        <div class="row g-4">
-                            <!-- Sales Card -->
-                            <div class="col-12 col-md-6 col-xl">
-                                <div class="card h-100 shadow-sm border-0">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-3">
-                                            <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-2">
-                                                <i class="fa fa-line-chart text-primary" style="font-size: 20px;"/>
-                                            </div>
-                                            <h6 class="card-title text-dark fw-bold mb-0">Sales</h6>
-                                        </div>
-                                        <table class="table table-sm table-borderless mb-0">
-                                            <tbody>
-                                                <tr>
-                                                    <td class="text-muted ps-0">Sales Target</td>
-                                                    <td class="text-end fw-semibold pe-0">
-                                                        <t t-esc="state.main_data.overview?.sales_target" />
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td class="text-muted ps-0">Total Achieved</td>
-                                                    <td class="text-end fw-semibold pe-0">
-                                                        <t t-esc="state.main_data.overview?.total_achieved" />
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td class="text-muted ps-0">SALES ORDER</td>
-                                                    <td class="text-end pe-0">
-                                                        <span class="text-end fw-semibold pe-0">
-                                                            <t t-esc="state.main_data.overview?.sales_order" />
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Target Achievement Card -->
-                            <div class="col-12 col-md-6 col-xl">
-                                <div class="card h-100 shadow-sm border-0">
-                                    <div class="card-body text-center d-flex flex-column justify-content-center">
-                                        
-                                        <!-- Title -->
-                                        <div class="d-flex align-items-center justify-content-center mb-3">
-                                            <div class="rounded-circle bg-success bg-opacity-10 p-2 me-2">
-                                                <i class="fa fa-bullseye text-success" style="font-size: 20px;"/>
-                                            </div>
-                                            <h6 class="card-title text-dark fw-bold mb-0">Target Achievement</h6>
-                                        </div>
-                                        
-                                        <!-- Circular Progress -->
-                                        <div class="position-relative d-inline-block mx-auto my-3" style="width: 140px; height: 140px;">
-                                            <svg width="140" height="140" style="transform: rotate(-90deg);">
-                                                <!-- Background Circle -->
-                                                <circle 
-                                                    cx="70" cy="70" r="60"
-                                                    fill="none"
-                                                    stroke="#e9ecef"
-                                                    stroke-width="12"
-                                                />
-                                                <!-- Dynamic Progress Circle -->
-                                                <circle 
-                                                    cx="70" cy="70" r="60"
-                                                    fill="none"
-                                                    t-att-stroke="(state.main_data.overview?.ratio or 0) >= 80 and '#28a745' or (state.main_data.overview?.ratio or 0) >= 50 and '#ffc107' or '#dc3545'"
-                                                    stroke-width="12"
-                                                    stroke-dasharray="377"
-                                                    t-att-stroke-dashoffset="state.main_data.overview?.ratio || 0"
-                                                    stroke-linecap="round"
-                                                    style="transition: stroke-dashoffset 0.6s ease;"
-                                                />
-                                            </svg>
-
-                                            <!-- Center Text -->
-                                            <div class="position-absolute top-50 start-50 translate-middle text-center">
-                                                <h2 class="mb-0 fw-bold text-success" style="font-size: 36px;">
-                                                    <t t-esc="(state.main_data.overview?.ratio or 0)"/>%
-                                                </h2>
-                                                <small class="text-muted" style="font-size: 11px;">Achieved</small>
-                                            </div>
-                                        </div>
-
-                                        <!-- Target vs Achieved -->
-                                        <div class="row g-2 mt-2">
-                                            <div class="col-6">
-                                                <div class="p-2 bg-light rounded">
-                                                    <small class="text-muted d-block" style="font-size: 11px;">Target</small>
-                                                    <strong class="text-dark">
-                                                        <t t-esc="state.main_data.overview?.target or 0"/>
-                                                    </strong>
-                                                </div>
-                                            </div>
-                                            <div class="col-6">
-                                                <div class="p-2 bg-success bg-opacity-10 rounded">
-                                                    <small class="text-muted d-block" style="font-size: 11px;">Achieved</small>
-                                                    <strong class="text-dark">
-                                                        <t t-esc="state.main_data.overview?.achieved or 0"/>
-                                                    </strong>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Revenue & Gross Profit Card -->
-                            <div class="col-12 col-md-6 col-xl">
-                                <div class="card h-100 shadow-sm border-0">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-3">
-                                            <div class="rounded-circle bg-success bg-opacity-10 p-2 me-2">
-                                                <i class="fa fa-dollar text-success" style="font-size: 20px;"/>
-                                            </div>
-                                            <h6 class="card-title text-dark fw-bold mb-0">Revenue &amp; Profit</h6>
-                                        </div>
-                                        <table class="table table-sm table-borderless mb-0">
-                                            <tbody>
-                                                <tr>
-                                                    <td class="text-muted ps-0">Revenue</td>
-                                                    <td class="text-end fw-semibold pe-0">
-                                                        <t t-esc="state.main_data.overview?.total_revenue" />
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td class="text-muted ps-0">Cost of Revenue</td>
-                                                    <td class="text-end fw-semibold pe-0 text-danger">
-                                                        <t t-esc="state.main_data.overview?.cost_of_revenue" />
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td class="text-muted ps-0">Gross Profit</td>
-                                                    <td class="text-end fw-semibold pe-0 text-success">
-                                                        <t t-esc="state.main_data.overview?.gross_profit" />
-                                                    </td>
-                                                </tr>
-                                                <tr class="border-top">
-                                                    <td class="text-muted ps-0 pt-2"><strong>Gross Margin</strong></td>
-                                                    <td class="text-end fw-bold pe-0 pt-2 text-success">
-                                                        <t t-esc="state.main_data.overview?.gross_margin" />
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Expenses & Net Profit Card -->
-                            <div class="col-12 col-md-6 col-xl">
-                                <div class="card h-100 shadow-sm border-0">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-3">
-                                            <div class="rounded-circle bg-warning bg-opacity-10 p-2 me-2">
-                                                <i class="fa fa-pie-chart text-warning" style="font-size: 20px;"/>
-                                            </div>
-                                            <h6 class="card-title text-dark fw-bold mb-0">Expenses &amp; Net Profit</h6>
-                                        </div>
-                                        <table class="table table-sm table-borderless mb-0">
-                                            <tbody>
-                                                <tr>
-                                                    <td class="text-muted ps-0">Expenses</td>
-                                                    <td class="text-end fw-semibold pe-0 text-danger">
-                                                        <t t-esc="state.main_data.overview?.total_expenses" />
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td class="text-muted ps-0">Net Profit</td>
-                                                    <td class="text-end fw-semibold pe-0 text-success">
-                                                        <t t-esc="state.main_data.overview?.net_profit" />
-                                                    </td>
-                                                </tr>
-                                                <tr class="border-top">
-                                                    <td class="text-muted ps-0 pt-2"><strong>Net Margin</strong></td>
-                                                    <td class="text-end fw-bold pe-0 pt-2 text-success">
-                                                        <t t-esc="state.main_data.overview?.net_margin" />
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Receivable & Payable Card -->
-                            <div class="col-12 col-md-6 col-xl">
-                                <div class="card h-100 shadow-sm border-0">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-3">
-                                            <div class="rounded-circle bg-info bg-opacity-10 p-2 me-2">
-                                                <i class="fa fa-exchange text-info" style="font-size: 20px;"/>
-                                            </div>
-                                            <h6 class="card-title text-dark fw-bold mb-0">Receivable &amp; Payable</h6>
-                                        </div>
-                                        <table class="table table-sm table-borderless mb-0">
-                                            <tbody>
-                                                <tr>
-                                                    <td class="text-muted ps-0">Accounts Receivable</td>
-                                                    <td class="text-end fw-semibold pe-0 text-info">
-                                                        <t t-esc="state.main_data.overview?.accounts_receivable" />
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td class="text-muted ps-0">Accounts Payable</td>
-                                                    <td class="text-end fw-semibold pe-0 text-warning">
-                                                        <t t-esc="state.main_data.overview?.accounts_payable" />
-                                                    </td>
-                                                </tr>
-                                                <tr class="border-top">
-                                                    <td class="text-muted ps-0 pt-2"><strong>Net Position</strong></td>
-                                                    <td class="text-end fw-bold pe-0 pt-2 text-danger">
-                                                        <t t-esc="state.main_data.overview?.net_postion" />
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="kpi_content">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td>Sales Target</td>
+                                    <td><t t-esc="state.main_data.overview?.sales_target"/></td>
+                                </tr>
+                                <tr>
+                                    <td>Total Achieved</td>
+                                    <td><t t-esc="state.main_data.overview?.total_achieved"/></td>
+                                </tr>
+                                <tr>
+                                    <td>Sales Order</td>
+                                    <td><t t-esc="state.main_data.overview?.sales_order"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <!-- Section 2: Sales Performance -->
-                <div class="dashboard_section" style="background: #f8f9fa;">
-                    <div class="container-fluid" style="padding: 30px 30px 0 30px;">
-                        <!-- Section Title -->
-                        <div class="row mb-4">
-                            <div class="col-12 text-center">
-                                <h5 class="text-uppercase text-muted mb-1" style="font-size: 12px; letter-spacing: 1px; font-weight: 600;">Sales Analysis</h5>
-                                <h3 class="fw-bold text-dark mb-0">Sales Performance</h3>
-                                <div class="mx-auto mt-2" style="width: 60px; height: 3px; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);"></div>
-                            </div>
+                <!-- Target Achievement Card -->
+                <div class="kpi_card target_achievement_card">
+                    <div class="kpi_header">
+                        <div class="kpi_icon bg-success-light">
+                            <i class="fa fa-bullseye text-success"/>
                         </div>
-
-                        <!-- Sales Chart -->
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="card shadow-sm border-0">
-                                    <div class="card-body p-4">
-                                        <canvas t-ref="salesChart" height="100"></canvas>
-                                    </div>
-                                </div>
-                            </div>
+                        <h6 class="kpi_title">Target Achievement</h6>
+                    </div>
+                    <div class="target_chart_wrapper">
+                        <div class="ta-bar-wrap">
+                            <canvas t-ref="targetBarChart"/>
                         </div>
+                    </div>
+                    <div class="target_legend">
+                        <span class="legend_item">
+                            <span class="ta-dot ta-dot--green"/>
+                            <small>Achieved</small>
+                        </span>
+                        <span class="legend_item">
+                            <span class="ta-dot ta-dot--red"/>
+                            <small>Unachieved</small>
+                        </span>
                     </div>
                 </div>
 
-                <!-- Section 3: Revenue, Expenses and EBT -->
-                <div class="dashboard_section">
-                    <div class="container-fluid" style="padding: 30px 30px 0 30px;">
-                        <!-- Section Title -->
-                        <div class="row mb-4">
-                            <div class="col-12 text-center">
-                                <h5 class="text-uppercase text-muted mb-1" style="font-size: 12px; letter-spacing: 1px; font-weight: 600;">Financial Breakdown</h5>
-                                <h3 class="fw-bold text-dark mb-0">Revenue, Expenses and EBT</h3>
-                                <div class="mx-auto mt-2" style="width: 60px; height: 3px; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);"></div>
-                            </div>
+                <!-- Revenue & Gross Profit Card -->
+                <div class="kpi_card">
+                    <div class="kpi_header">
+                        <div class="kpi_icon bg-success-light">
+                            <i class="fa fa-dollar text-success"/>
                         </div>
-
-                        <!-- Revenue & Expenses Chart -->
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="card shadow-sm border-0">
-                                    <div class="card-body p-4">
-                                        <canvas t-ref="revenueExpensesChart" height="100"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <h6 class="kpi_title">Revenue &amp; Profit</h6>
+                    </div>
+                    <div class="kpi_content">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td>Revenue</td>
+                                    <td><t t-esc="state.main_data.overview?.total_revenue"/></td>
+                                </tr>
+                                <tr>
+                                    <td>Cost of Revenue</td>
+                                    <td class="text-danger"><t t-esc="state.main_data.overview?.cost_of_revenue"/></td>
+                                </tr>
+                                <tr>
+                                    <td>Gross Profit</td>
+                                    <td class="text-success"><t t-esc="state.main_data.overview?.gross_profit"/></td>
+                                </tr>
+                                <tr class="border-top">
+                                    <td><strong>Gross Margin</strong></td>
+                                    <td class="text-success"><t t-esc="state.main_data.overview?.gross_margin"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <!-- Section 4: Cash Flow -->
-                <div class="dashboard_section" style="background: #f8f9fa;">
-                    <div class="container-fluid" style="padding: 30px 30px 0 30px;">
-                        <!-- Section Title -->
-                        <div class="row mb-4">
-                            <div class="col-12 text-center">
-                                <h2 class="fw-bold text-dark mb-0">Cash Flow (Incoming and Outgoing)</h2>
-                            </div>
+                <!-- Expenses & Net Profit Card -->
+                <div class="kpi_card">
+                    <div class="kpi_header">
+                        <div class="kpi_icon bg-warning-light">
+                            <i class="fa fa-pie-chart text-warning"/>
                         </div>
-
-                        <!-- Your Cash Flow content here -->
-                        <div class="row g-4">
-                            <div class="col-12">
-                                <div class="card shadow-sm border-0">
-                                    <div class="card-body text-center p-5">
-                                        <p class="text-muted">Cash flow analysis will be displayed here</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <h6 class="kpi_title">Expenses &amp; Net Profit</h6>
+                    </div>
+                    <div class="kpi_content">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td>Expenses</td>
+                                    <td class="text-danger"><t t-esc="state.main_data.overview?.total_expenses"/></td>
+                                </tr>
+                                <tr>
+                                    <td>Net Profit</td>
+                                    <td class="text-success"><t t-esc="state.main_data.overview?.net_profit"/></td>
+                                </tr>
+                                <tr class="border-top">
+                                    <td><strong>Net Margin</strong></td>
+                                    <td class="text-success"><t t-esc="state.main_data.overview?.net_margin"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-            </t>
+
+                <!-- Receivable & Payable Card -->
+                <div class="kpi_card">
+                    <div class="kpi_header">
+                        <div class="kpi_icon bg-info-light">
+                            <i class="fa fa-exchange text-info"/>
+                        </div>
+                        <h6 class="kpi_title">Receivable &amp; Payable</h6>
+                    </div>
+                    <div class="kpi_content">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td>Accounts Receivable</td>
+                                    <td class="text-info"><t t-esc="state.main_data.overview?.accounts_receivable"/></td>
+                                </tr>
+                                <tr>
+                                    <td>Accounts Payable</td>
+                                    <td class="text-warning"><t t-esc="state.main_data.overview?.accounts_payable"/></td>
+                                </tr>
+                                <tr class="border-top">
+                                    <td><strong>Net Position</strong></td>
+                                    <td class="text-danger"><t t-esc="state.main_data.overview?.net_postion"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section (65% height) -->
+            <div class="charts_section">
+                <!-- Sales Chart -->
+                <div class="chart_card">
+                    <div t-ref="salesChart" class="chart-container" style="height: 400px; width: 100%;"/>
+                </div>
+
+                <!-- Revenue & Expenses Chart -->
+                <div class="chart_card">
+                    <div t-ref="revenueExpensesChart" class="chart-container" style="height: 400px; width: 100%;"/>
+                </div>
+
+                <!-- Cashflow Chart -->
+                <div class="chart_card">
+                    <div t-ref="cashflowChart" class="chart-container" style="height: 400px; width: 100%;"/>
+                </div>
+            </div>
         </div>
     </t>
 </templates>
