@@ -794,15 +794,15 @@ class L2Dashboard(models.Model):
         }
 
     def action_back_to_l1(self):
-        """Go back to L1 dashboard."""
+        """Go back to L1 dashboard (L1 demo)."""
         self.ensure_one()
-        # Prefer XML-ID if available, else fall back to the URL you gave.
+        # Prefer XML-ID if available, else fall back to the exact URL you provided.
         try:
-            action = self.env.ref('my_dashboard.action_l1_dashboard').read()[0]
+            action = self.env.ref("my_dashboard.action_l1_dashboard_demo").read()[0]
             return action
         except Exception:
             return {
-                'type': 'ir.actions.act_url',
-                'url': '/web#menu_id=650&cids=1&action=946&model=l1.dashboard&view_type=form',
-                'target': 'self',
+                "type": "ir.actions.act_url",
+                "url": "http://194.233.83.117:8069/web#cids=1&action=953&model=l1.dashboard_demo&view_type=form&menu_id=632",
+                "target": "self",
             }

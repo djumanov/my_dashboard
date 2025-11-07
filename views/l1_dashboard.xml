@@ -45,6 +45,9 @@
                     .o_field_widget {
                         margin-bottom: 0 !important;
                     }
+                    .o_form_view.o_form_nosheet, .o_form_view .o_form_nosheet {
+                        padding: 0 !important;
+                    }
                     
                     .o_l1_dashboard_form .o_form_sheet_bg {
                         background: #f5f7fa !important;
@@ -70,7 +73,7 @@
                         justify-content: space-between;
                         align-items: center;
                         box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-                        height: 64px;
+                        height: 55px;
                         flex-shrink: 0;
                     }
                     
@@ -196,7 +199,7 @@
                         background: white;
                         border-radius: 12px;
                         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-                        padding: 16px;
+                        padding: 16px 16px 0 16px;
                         display: flex;
                         flex-direction: column;
                         transition: all 0.3s ease;
@@ -212,7 +215,7 @@
                     .kpi_header {
                         display: flex;
                         align-items: center;
-                        margin-bottom: 12px;
+                        margin-bottom: 0;
                         gap: 10px;
                     }
                     
@@ -287,8 +290,8 @@
                     }
                     
                     .ta-bar-wrap {
-                        width: 100px;
-                        height: 140px;
+                        width: 120px;
+                        height: 100px;
                     }
                     
                     .ta-bar-wrap canvas {
@@ -299,9 +302,9 @@
                     .target_legend {
                         display: flex;
                         align-items: center;
-                        justify-content: center;
+                        justify-content: right;
                         gap: 16px;
-                        padding-top: 8px;
+                        padding-top: 0;
                     }
                     
                     .legend_item {
@@ -340,7 +343,7 @@
                         background: white;
                         border-radius: 12px;
                         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-                        padding: 16px;
+                        padding: 0;
                         display: flex;
                         flex-direction: column;
                         border: 1px solid #e2e8f0;
@@ -360,7 +363,7 @@
                     
                     .chart-container canvas {
                         max-height: 100% !important;
-                        height: 350px !important;
+                        height: 380px !important;
                     }
 
                     /* ========================================

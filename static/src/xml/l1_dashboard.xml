@@ -39,20 +39,11 @@
                         </div>
                         <h6 class="kpi_title">Target Achievement</h6>
                     </div>
+                    
                     <div class="target_chart_wrapper">
                         <div class="ta-bar-wrap">
                             <canvas t-ref="targetBarChart"/>
                         </div>
-                    </div>
-                    <div class="target_legend">
-                        <span class="legend_item">
-                            <span class="ta-dot ta-dot--green"/>
-                            <small>Achieved</small>
-                        </span>
-                        <span class="legend_item">
-                            <span class="ta-dot ta-dot--red"/>
-                            <small>Unachieved</small>
-                        </span>
                     </div>
                 </div>
 
@@ -149,17 +140,26 @@
             <div class="charts_section">
                 <!-- Sales Chart -->
                 <div class="chart_card">
-                    <div t-ref="salesChart" class="chart-container" style="height: 400px; width: 100%;"/>
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Sales</h5>
+                    </div>
+                    <div t-ref="salesChart" class="chart-container" style="height: 450px; width: 100%;"/>
                 </div>
 
                 <!-- Revenue & Expenses Chart -->
                 <div class="chart_card">
-                    <div t-ref="revenueExpensesChart" class="chart-container" style="height: 400px; width: 100%;"/>
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Revenue, Expenses and EBT</h5>
+                    </div>
+                    <div t-ref="revenueExpensesChart" class="chart-container" style="height: 450px; width: 100%;"/>
                 </div>
 
                 <!-- Cashflow Chart -->
                 <div class="chart_card">
-                    <div t-ref="cashflowChart" class="chart-container" style="height: 400px; width: 100%;"/>
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">CashFlow</h5>
+                    </div>
+                    <div t-ref="cashflowChart" class="chart-container" style="height: 450px; width: 100%;"/>
                 </div>
             </div>
         </div>

@@ -489,14 +489,14 @@ export class L2Dashboard extends Component {
             bodyColor: "#fff",
             padding: 14,
             callbacks: {
-              label: (ctx) => `${ctx.dataset.label}: $${(ctx.parsed.y ?? 0).toLocaleString("en-US")}`,
+              label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y ?? 0).toLocaleString("en-US")}`,
               afterBody: (ctx) => {
                 if (ctx.length === 2) {
                   const infl = ctx[0].parsed.y || 0;
                   const out  = ctx[1].parsed.y || 0;
                   const net  = infl - out;
                   const ratio = infl ? ((net / infl) * 100).toFixed(1) : "0.0";
-                  return ["", `Net Cash Flow: $${net.toLocaleString()}`, `Cash Flow Ratio: ${ratio}%`];
+                  return ["", `Net Cash Flow: ${net.toLocaleString()}`, `Cash Flow Ratio: ${ratio}%`];
                 }
               },
             },
@@ -516,6 +516,27 @@ export class L2Dashboard extends Component {
           },
         },
       },
+      plugins: [{
+          id: 'customDataLabels',
+          afterDatasetsDraw: (chart) => {
+              const ctx = chart.ctx;
+              chart.data.datasets.forEach((dataset, datasetIndex) => {
+                  const meta = chart.getDatasetMeta(datasetIndex);
+                  if (!meta.hidden) {
+                      meta.data.forEach((bar, index) => {
+                        const value = dataset.data[index];
+                        const displayValue = this.formatMillionsShort(value);
+
+                        ctx.fillStyle = '#333';
+                        ctx.font = '700 11px Inter, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        ctx.fillText(displayValue, bar.x, bar.y - 8);
+                    });
+                  }
+              });
+          }
+      }]
     });
   }
   
@@ -580,6 +601,8 @@ export class L2Dashboard extends Component {
       minimumFractionDigits: isInt ? 0 : 1,
       maximumFractionDigits: isInt ? 0 : 1,
     }).format(truncated);
+    if (!s) return "";
+    if (s === "0") return "0";
     return `${s} M`;
   }
   formatDateTime(dateTimeStr) {
